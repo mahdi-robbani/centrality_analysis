@@ -181,8 +181,18 @@ H = remove_isolates(G)
 C = keep_largest_comonent(G)
 data_largest_comp, pos = get_reduced_df(data, C)
 
-for col in basic:
-    plot_graph(C, data_largest_comp, col)
+if PLOT:
+    for col in basic:
+        plot_graph(C, data_largest_comp, col)
+
+comps = nx.algorithms.components.connected_components(G)
+comps_size = sorted([len(c) for c in comps], reverse= True)
+plt.plot(comps_size)
+for i, length in enumerate(comps_size):
+    if length > 1:
+        plt.annotate(length, (i, length))
+plt.savefig("comp_size.png")
+print(sum(comps_size))
 
 
 # def plot_centrality_vs_residues(data, columns, sds, fname = ""):
