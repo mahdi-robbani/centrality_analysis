@@ -1,0 +1,1 @@
+python 4-plot_centrality.py -b -f -m -g -s -o "test"
