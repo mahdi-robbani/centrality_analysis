@@ -98,20 +98,15 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, size = (9, 7
 
 def heatmap(data, colnames, fname, oudir):
     cor = data[colnames].corr().round(2)
-    plt.figure(figsize=(8,8))
-    ax = sns.heatmap(cor, square = True, annot = True, cmap="viridis", vmin=0, vmax=1)
-    ax.set_yticks(np.arange(0, len(colnames)+1))
-    # print(np.arange(0.5, len(cor.index), 1))
-    # plt.xticks(np.arange(0, len(cor.index), 1), cor.index)
-    # plt.yticks(np.arange(-0.5, len(cor.index), 1), cor.index)
+    plt.figure(figsize=(10,8))
+    sns.heatmap(cor, cmap="viridis", annot = True, vmin = 0, vmax = 1)
     plt.tight_layout()
     plt.savefig(f"{out_dir}/correlation_{fname}.pdf")
-
     plt.clf()
 
 #load file
 data = pd.read_csv(file_path, sep ="\t")
-# remove node names, res name, and hubs
+#remove node names, res name, and hubs
 colnames = list(data.columns)[2:]
 new_colnames = replace_dict(colnames)
 data = data.rename(columns = dict(zip(colnames, new_colnames)))
@@ -128,7 +123,7 @@ if args.flow:
     plot_centrality_vs_residues(data, flow, sds, "flow", out_dir)
 if args.heatmap:
     #plot heatmap
-    heatmap(data, new_colnames, "flow", out_dir) #xticklabels
+    heatmap(data, data.columns, "flow", out_dir) #xticklabels
 
 # network plots
 
