@@ -157,8 +157,7 @@ def get_reduced_df(df, H):
     reduced_df = df.loc[df['node'].isin(node_list)]
     return reduced_df, pos
 
-
-def plot_graph(G, df, measure, out_dir):
+def plot_graph(G, pos, df, measure, out_dir):
     nodes = df['node']
     lab = {node:node[1:] for node in nodes}
     weights = df[measure]
@@ -171,21 +170,33 @@ def plot_graph(G, df, measure, out_dir):
     plt.savefig(f'{out_dir}{measure}_graph.png')
     plt.clf()
 
+def get_plot_requirements(matrix, pdb, cent_df):
+    nodes, G = build_graph(matrix, pdb)
+    H = remove_isolates(G)
+    C = keep_largest_comonent(G)
+    data_largest_comp, pos = get_reduced_df(cent_df, C)
+    return data_largest_comp, pos, C
 
+    # nodes, G = build_graph(args.inp_dat, args.inp_pdb)
+    # H = remove_isolates(G)
+    # C = keep_largest_comonent(G)
+    # data_largest_comp, pos = get_reduced_df(data, C)
 
-nodes, G = build_graph(args.inp_dat, args.inp_pdb)
-H = remove_isolates(G)
-C = keep_largest_comonent(G)
-data_largest_comp, pos = get_reduced_df(data, C)
 
 if args.graph:
+    data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
+                                                      pdb = args.inp_pdb, 
+                                                      cent_df = data)
     for col in basic:
         print("Plotting network for all basic components")
-        plot_graph(C, data_largest_comp, col, out_dir)
+        plot_graph(G = C, pos = pos, df = data_largest_comp, 
+                   measure = col, out_dir = out_dir)
 
-comps = nx.algorithms.components.connected_components(G)
-comps_size = sorted([len(c) for c in comps], reverse= True)
+
 if args.size:
+    nodes, G = build_graph(args.inp_dat, args.inp_pdb)
+    comps = nx.algorithms.components.connected_components(G)
+    comps_size = sorted([len(c) for c in comps], reverse= True)
     print("Plotting size of components")
     plt.plot(comps_size)
     for i, length in enumerate(comps_size):
