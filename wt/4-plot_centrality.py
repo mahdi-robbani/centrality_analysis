@@ -116,13 +116,16 @@ sds = [3]
 # plot basic
 basic = ['degree', 'betweenness', 'closeness', 'eigenvector']
 if args.basic:
+    print("plotting centrality vs residues for basic cenralities")
     plot_centrality_vs_residues(data, basic, sds, "basic", out_dir)
 # plot only flow centralities
 flow = ['current_betweenness_c0', 'current_closeness_c0', 'current_betweenness_c1', 'current_closeness_c1', 'current_betweenness_c2', 'current_closeness_c2']
 if args.flow:
+    print("plotting centrality vs residues for flow cenralities")
     plot_centrality_vs_residues(data, flow, sds, "flow", out_dir)
 if args.heatmap:
     #plot heatmap
+    print("plotting heatmap for all cenralities")
     heatmap(data, data.columns, "flow", out_dir) #xticklabels
 
 # network plots
@@ -177,15 +180,17 @@ data_largest_comp, pos = get_reduced_df(data, C)
 
 if args.graph:
     for col in basic:
+        print("Plotting network for all basic components")
         plot_graph(C, data_largest_comp, col, out_dir)
 
 comps = nx.algorithms.components.connected_components(G)
 comps_size = sorted([len(c) for c in comps], reverse= True)
 if args.size:
+    print("Plotting size of components")
     plt.plot(comps_size)
     for i, length in enumerate(comps_size):
         if length > 1:
             plt.annotate(length, (i, length))
     plt.savefig(f"{out_dir}comp_size.png")
     
-print("plot compelte")
+
