@@ -1,8 +1,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import networkx as nx
+import MDAnalysis as mda
+from Bio import PDB
+import argparse
+
 
 wt = "../wt/centrality/flow.txt"
 mt = "../s99t/centrality/s99t.txt"
+pdb = "../wt/model0_A.pdb"
 
 def get_df_basic(fname):
     df = pd.read_csv(fname, sep ="\t")
@@ -44,4 +50,43 @@ def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
         plt.clf()
 
 
-plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
+#plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
+
+# create pdb
+
+def replace_bfac_column(pdb, vals, pdb_out):
+    """Replace the column containing B-factors in a PDB with
+    custom values."""
+
+    # create tthe PDB parser
+    parser = PDB.PDBParser()
+    # get the protein structure
+    structure = parser.get_structure("protein", pdb)
+    io = PDB.PDBIO()
+    chain_offset = 0
+    for model in structure:
+        for chain in model:
+            for i, residue in enumerate(chain):
+                for atom in residue:
+                    # set the custom value
+                    atom.set_bfactor(float(vals[i+chain_offset]))
+            chain_offset += len(chain)
+    # set the structure for the output
+    io.set_structure(structure)
+    # save the structure to a new PDB file
+    io.save(pdb_out)
+
+def write_pdb_files(df, pdb, fname):
+    """Save a pdb file for every centrality measure in the input 
+    centrality dictionary.
+    """
+
+    for col in df.columns:
+        # Ignore residue name column
+        if col != "node":
+            # Create input array
+            cent_array = df[col]
+            # Replace column and save PDB file
+            replace_bfac_column(pdb, cent_array, f"{fname}_{col}.pdb")
+
+write_pdb_files(diff_df, pdb, "pdb/diff")
