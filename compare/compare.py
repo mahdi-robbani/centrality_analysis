@@ -4,6 +4,7 @@ import networkx as nx
 import MDAnalysis as mda
 from Bio import PDB
 import argparse
+from collections import Counter
 
 
 wt = "../wt/centrality/flow.txt"
@@ -29,12 +30,14 @@ wt_df = get_df_basic(wt)
 mt_df = get_df_basic(mt)
 
 
-diff_df = get_diff_df(wt_df, mt_df, scale = False)
+diff_df = get_diff_df(wt_df, mt_df, scale = False, abs = False)
 diff_df['node'] = node
 
 def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
-    nodes = []
+    node_dict = {}
+    # make sure equal number of rows and cols
     nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
+    # make one plot for each standard deviation
     for sd in sds:
         fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= True)
         for i, ax in enumerate(axs.flat):
@@ -42,13 +45,16 @@ def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
                 ax.plot(data[columns[i]], label = columns[i])
                 ax.set_title(columns[i])
                 mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
-                cutoff = mean_std[0] + sd*mean_std[1]
+                cutoff_u = mean_std[0] + sd*mean_std[1]
+                cutoff_l = mean_std[0] - sd*mean_std[1]
+                node_list = []
                 for j, val in enumerate(data[columns[i]]):
-                    if abs(val) > cutoff:
+                    if val > cutoff_u or val < cutoff_l:
                         ax.annotate(data['node'][j], (j, val))
-                        nodes.append(data['node'][j])
-                ax.hlines(y = cutoff, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
-                ax.hlines(y = -cutoff, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
+                        node_list.append(data['node'][j])
+                node_dict.update({columns[i] : node_list})
+                ax.hlines(y = cutoff_u, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
+                ax.hlines(y = cutoff_l, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
                 ax.set(xlabel = 'residues', ylabel='Centrality Value')
             else:
                 ax.set_visible(False)
@@ -59,9 +65,20 @@ def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
         #plt.legend()
         plt.savefig(f"{fname}.pdf")
         plt.clf()
+    return node_dict
+
+def get_count(node_dict):
+    print(node_dict)
+    node_list = []
+    for nodes in node_dict.values():
+        node_list += nodes
+    cnt = Counter(node_list)
+    print(cnt)
+    return node_list
 
 
-plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
+diff_nodes = plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
+print(get_count(diff_nodes))
 
 # create pdb
 
@@ -102,10 +119,10 @@ def write_pdb_files(df, pdb, fname):
 
 #write_pdb_files(diff_df, pdb, "pdb/diff")
 
-scaled_diff_df = get_diff_df(wt_df, mt_df, scale = True)
+scaled_diff_df = get_diff_df(wt_df, mt_df, scale = True, abs = False)
 scaled_diff_df['node'] = node
-plot_centrality_vs_residues(scaled_diff_df, list(scaled_diff_df.columns)[:-1], [3], "scaled_diff")
-
+scaled_diff_nodes = plot_centrality_vs_residues(scaled_diff_df, list(scaled_diff_df.columns)[:-1], [3], "scaled_diff")
+print(get_count(scaled_diff_nodes))
 
 
 
