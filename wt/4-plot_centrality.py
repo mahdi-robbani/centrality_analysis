@@ -53,19 +53,25 @@ def replace_dict(names):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--centrality_file", dest="inp_cent", default = "centrality/flow.txt")
+parser.add_argument("-wt", "--centrality_file_wt", dest="wt", default = "centrality/flow.txt")
+parser.add_argument("-mt", "--centrality_file_mut", dest="mut", default = "../s99t/centrality/s99t.txt")
 parser.add_argument("-d", "--dat_file", dest="inp_dat", default = "hc_graph_filtered.dat")
 parser.add_argument("-p", "--pdb_file", dest="inp_pdb", default = "model0_A.pdb")
 parser.add_argument("-b", "--basic", dest = "basic", default = False, action="store_true")
 parser.add_argument("-f", "--flow", dest = "flow", default = False, action="store_true")
+parser.add_argument("-db", "--difference_basic", dest = "d_basic", default = False, action="store_true")
+parser.add_argument("-df", "--differece_flow", dest = "d_flow", default = False, action="store_true")
 parser.add_argument("-m", "--heatmap", dest = "heatmap", default = False, action="store_true")
 parser.add_argument("-g", "--graph", dest = "graph", default = False, action="store_true")
+parser.add_argument("-dg", "--difference_graph", dest = "d_graph", default = False, action="store_true")
 parser.add_argument("-s", "--comp_size", dest = "size", default = False, action="store_true")
 parser.add_argument("-o", "--output", dest = "output", default="plots")
 args = parser.parse_args()
 
 
 # set directory
-file_path = args.inp_cent
+#file_path = args.inp_cent
+file_path = args.wt
 out_dir = f"{args.output}/"
 
 
@@ -177,12 +183,6 @@ def get_plot_requirements(matrix, pdb, cent_df):
     data_largest_comp, pos = get_reduced_df(cent_df, C)
     return data_largest_comp, pos, C
 
-    # nodes, G = build_graph(args.inp_dat, args.inp_pdb)
-    # H = remove_isolates(G)
-    # C = keep_largest_comonent(G)
-    # data_largest_comp, pos = get_reduced_df(data, C)
-
-
 if args.graph:
     data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
                                                       pdb = args.inp_pdb, 
@@ -205,3 +205,35 @@ if args.size:
     plt.savefig(f"{out_dir}comp_size.png")
     
 
+
+def get_df_basic(fname):
+    df = pd.read_csv(fname, sep ="\t")
+    colnames = ["degree", "betweenness", "closeness", "eigenvector"]
+    df = df[colnames]
+    return df
+
+def get_diff_df(wt, mut, abs = True):
+    node_wt = pd.read_csv(wt, sep = "\t")['node']
+    node_mut = pd.read_csv(mut, sep = "\t")['node']
+    assert node_wt.shape == node_mut.shape
+    wt_df = get_df_basic(wt)
+    mt_df = get_df_basic(mut)
+    diff_df = (wt_df - mt_df).abs() if abs else wt_df - mt_df
+    diff_df['node'] = node_wt
+    return diff_df
+
+
+if args.d_graph:
+    if args.wt and args.mut:
+        diff_df = get_diff_df(args.wt, args.mut)
+        data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
+                                                          pdb = args.inp_pdb, 
+                                                          cent_df = diff_df)
+        for col in basic:
+            print("Plotting network for all basic components")
+            plot_graph(G = C, pos = pos, df = data_largest_comp, 
+                    measure = col, out_dir = f"{out_dir}diff_")
+        
+    else:
+        print("ERROR: Specify WT and Mut files. Exiting...")
+        exit(1)
