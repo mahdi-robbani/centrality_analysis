@@ -16,15 +16,24 @@ def get_df_basic(fname):
     df = df[colnames]
     return df
 
+def get_diff_df(wt_df, mt_df, scale, abs = False):
+    w_max = wt_df.max()
+    m_max = mt_df.max()
+    scale_val = w_max/m_max if scale else 1
+    diff = (mt_df * scale) - wt_df
+    diff = diff.abs() if abs else diff
+    return diff
+
 node = pd.read_csv(wt, sep = "\t")['node']
 wt_df = get_df_basic(wt)
 mt_df = get_df_basic(mt)
 
 
-diff_df = (wt_df - mt_df).abs()
+diff_df = get_diff_df(wt_df, mt_df, scale = False)
 diff_df['node'] = node
 
 def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
+    nodes = []
     nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
     for sd in sds:
         fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= True)
@@ -35,9 +44,11 @@ def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
                 mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
                 cutoff = mean_std[0] + sd*mean_std[1]
                 for j, val in enumerate(data[columns[i]]):
-                    if val > cutoff:
+                    if abs(val) > cutoff:
                         ax.annotate(data['node'][j], (j, val))
+                        nodes.append(data['node'][j])
                 ax.hlines(y = cutoff, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
+                ax.hlines(y = -cutoff, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
                 ax.set(xlabel = 'residues', ylabel='Centrality Value')
             else:
                 ax.set_visible(False)
@@ -50,7 +61,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
         plt.clf()
 
 
-#plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
+plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
 
 # create pdb
 
@@ -89,4 +100,14 @@ def write_pdb_files(df, pdb, fname):
             # Replace column and save PDB file
             replace_bfac_column(pdb, cent_array, f"{fname}_{col}.pdb")
 
-write_pdb_files(diff_df, pdb, "pdb/diff")
+#write_pdb_files(diff_df, pdb, "pdb/diff")
+
+scaled_diff_df = get_diff_df(wt_df, mt_df, scale = True)
+scaled_diff_df['node'] = node
+plot_centrality_vs_residues(scaled_diff_df, list(scaled_diff_df.columns)[:-1], [3], "scaled_diff")
+
+
+
+
+
+
