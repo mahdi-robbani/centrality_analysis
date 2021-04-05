@@ -18,17 +18,16 @@ def get_df_basic(fname):
     return df
 
 def get_diff_df(wt_df, mt_df, scale, abs = False):
-    w_max = wt_df.max()
-    m_max = mt_df.max()
-    scale_val = w_max/m_max if scale else 1
-    diff = (mt_df * scale) - wt_df
+    if scale:
+        wt_df = wt_df / wt_df.max()
+        mt_df = mt_df / mt_df.max()
+    diff = mt_df - wt_df
     diff = diff.abs() if abs else diff
     return diff
 
 node = pd.read_csv(wt, sep = "\t")['node']
 wt_df = get_df_basic(wt)
 mt_df = get_df_basic(mt)
-
 
 diff_df = get_diff_df(wt_df, mt_df, scale = False, abs = False)
 diff_df['node'] = node
@@ -73,7 +72,7 @@ def get_count(node_dict):
     for nodes in node_dict.values():
         node_list += nodes
     cnt = Counter(node_list)
-    print(cnt)
+    node_list = [n for n, c in cnt.items()]
     return node_list
 
 
@@ -117,14 +116,22 @@ def write_pdb_files(df, pdb, fname):
             # Replace column and save PDB file
             replace_bfac_column(pdb, cent_array, f"{fname}_{col}.pdb")
 
-write_pdb_files(diff_df, pdb, "pdb/diff")
+#write_pdb_files(diff_df, pdb, "pdb/diff")
 
 scaled_diff_df = get_diff_df(wt_df, mt_df, scale = True, abs = False)
 scaled_diff_df['node'] = node
 scaled_diff_nodes = plot_centrality_vs_residues(scaled_diff_df, list(scaled_diff_df.columns)[:-1], [3], "scaled_diff")
 print(get_count(scaled_diff_nodes))
 
-write_pdb_files(scaled_diff_df, pdb, "pdb/scaled_diff")
+#write_pdb_files(scaled_diff_df, pdb, "pdb/scaled_diff")
+
+
+# ratio_df = wt_df / mt_df
+# ratio_df['node'] = node
+# ratio_df_nodes = plot_centrality_vs_residues(ratio_df, list(ratio_df.columns)[:-1], [3], "ratio")
+# print(get_count(ratio_df_nodes))
+
+
 
 
 
