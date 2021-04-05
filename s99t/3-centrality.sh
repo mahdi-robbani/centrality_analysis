@@ -5,6 +5,9 @@ pdb=model0.pdb
 pdb_A=model0_A.pdb
 # remember to activate virtual environment
 
-#Test all non group centralities
-python $script -i $inp -r $pdb_A -c all -o centrality/s99t -p
-#python $script -i $inp -r $pdb_A -c group -g A40:A60 -o centrality/group
+#node centralities
+#python $script -i $inp -r $pdb_A -c all -o centrality/s99t -p
+
+#edge centralities
+python $script -i $inp -r $pdb_A -c edge_betweenness -o centrality/edge
+
