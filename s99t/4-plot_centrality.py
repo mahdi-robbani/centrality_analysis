@@ -6,6 +6,23 @@ import networkx as nx
 import MDAnalysis as mda
 import argparse
 
+#mut max
+# "degree" :         0.030864
+# "betweenness"    0.046737
+# "closeness"      0.049948
+# "eigenvector"    0.450326
+
+#wt max
+WT_DICT = {"degree": 0.030864,
+              "betweenness": 0.144122,
+              "closeness": 0.067009,
+              "eigenvector": 0.519175}
+
+RANGE_DICT = {"degree": 0.035,
+              "betweenness": 0.15,
+              "closeness": 0.10,
+              "eigenvector": 0.55}
+
 # Helper functions
 def build_graph(fname, pdb = None):
     """Build a graph from the provided matrix"""
@@ -52,9 +69,9 @@ def replace_dict(names):
     return new_names
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--centrality_file", dest="inp_cent", default = "centrality/flow.txt")
-parser.add_argument("-wt", "--centrality_file_wt", dest="wt", default = "centrality/flow.txt")
-parser.add_argument("-mt", "--centrality_file_mut", dest="mut", default = "../s99t/centrality/s99t.txt")
+parser.add_argument("-c", "--centrality_file", dest="inp_cent", default = "centrality/s99t.txt")
+parser.add_argument("-wt", "--centrality_file_wt", dest="wt", default = "centrality/s99t.txt")
+parser.add_argument("-mt", "--centrality_file_mut", dest="mut", default = "../wt/centrality/wt.txt")
 parser.add_argument("-d", "--dat_file", dest="inp_dat", default = "hc_graph_filtered.dat")
 parser.add_argument("-p", "--pdb_file", dest="inp_pdb", default = "model0_A.pdb")
 parser.add_argument("-b", "--basic", dest = "basic", default = False, action="store_true")
@@ -85,6 +102,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, size = (9, 7
             if i < len(columns):
                 ax.plot(data[columns[i]], label = columns[i])
                 ax.set_title(columns[i])
+                ax.set_ylim(top = RANGE_DICT[columns[i]])
                 mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
                 cutoff = mean_std[0] + sd*mean_std[1]
                 for j, val in enumerate(data[columns[i]]):
@@ -168,7 +186,7 @@ def plot_graph(G, pos, df, measure, out_dir):
     lab = {node:node[1:] for node in nodes}
     weights = df[measure]
     ec = nx.draw_networkx_edges(G, pos)
-    nc = nx.draw_networkx_nodes(G, pos, nodelist = nodes, node_color = weights, cmap = plt.cm.hot, edgecolors='black')
+    nc = nx.draw_networkx_nodes(G, pos, nodelist = nodes, node_color = weights, cmap = plt.cm.hot, edgecolors='black', vmax = WT_DICT[measure])
     plt.colorbar(nc)
     nx.draw_networkx_labels(G, pos, labels = lab, font_size=9, font_color ='midnightblue')
     plt.axis('off')
