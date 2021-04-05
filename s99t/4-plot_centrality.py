@@ -2,12 +2,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import itertools
-from sklearn.linear_model import LinearRegression
-from scipy.stats import pearsonr
 import networkx as nx
 import MDAnalysis as mda
+import argparse
 
+# Helper functions
 def build_graph(fname, pdb = None):
     """Build a graph from the provided matrix"""
 
@@ -41,11 +40,6 @@ def build_graph(fname, pdb = None):
     # return the idenfiers and the graph
     return identifiers, G
 
-# set directory
-file_path = "centrality/s99t.txt"
-out_dir = "plots/"
-PLOT = False
-
 def replace_dict(names):
     new_names = []
     for name in names:
@@ -57,7 +51,33 @@ def replace_dict(names):
             new_names.append(name)
     return new_names
 
-def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
+parser = argparse.ArgumentParser()
+parser.add_argument("-c", "--centrality_file", dest="inp_cent", default = "centrality/flow.txt")
+parser.add_argument("-wt", "--centrality_file_wt", dest="wt", default = "centrality/flow.txt")
+parser.add_argument("-mt", "--centrality_file_mut", dest="mut", default = "../s99t/centrality/s99t.txt")
+parser.add_argument("-d", "--dat_file", dest="inp_dat", default = "hc_graph_filtered.dat")
+parser.add_argument("-p", "--pdb_file", dest="inp_pdb", default = "model0_A.pdb")
+parser.add_argument("-b", "--basic", dest = "basic", default = False, action="store_true")
+parser.add_argument("-f", "--flow", dest = "flow", default = False, action="store_true")
+parser.add_argument("-db", "--difference_basic", dest = "d_basic", default = False, action="store_true")
+parser.add_argument("-df", "--differece_flow", dest = "d_flow", default = False, action="store_true")
+parser.add_argument("-m", "--heatmap", dest = "heatmap", default = False, action="store_true")
+parser.add_argument("-g", "--graph", dest = "graph", default = False, action="store_true")
+parser.add_argument("-dg", "--difference_graph", dest = "d_graph", default = False, action="store_true")
+parser.add_argument("-s", "--comp_size", dest = "size", default = False, action="store_true")
+parser.add_argument("-o", "--output", dest = "output", default="plots")
+args = parser.parse_args()
+
+
+# set directory
+#file_path = args.inp_cent
+file_path = args.wt
+out_dir = f"{args.output}/"
+
+
+# plotting functions
+
+def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, size = (9, 7)):
     nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
     for sd in sds:
         fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= False)
@@ -82,22 +102,17 @@ def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
         plt.savefig(f"{out_dir}/centrality_{sd}_{fname}.pdf")
         plt.clf()
 
-def heatmap(data, colnames, fname=""):
+def heatmap(data, colnames, fname, oudir):
     cor = data[colnames].corr().round(2)
-    plt.figure(figsize=(8,8))
-    ax = sns.heatmap(cor, square = True, annot = True, cmap="viridis", vmin=0, vmax=1)
-    ax.set_yticks(np.arange(0, len(colnames)+1))
-    # print(np.arange(0.5, len(cor.index), 1))
-    # plt.xticks(np.arange(0, len(cor.index), 1), cor.index)
-    # plt.yticks(np.arange(-0.5, len(cor.index), 1), cor.index)
+    plt.figure(figsize=(10,8))
+    sns.heatmap(cor, cmap="viridis", annot = True, vmin = 0, vmax = 1)
     plt.tight_layout()
     plt.savefig(f"{out_dir}/correlation_{fname}.pdf")
-
     plt.clf()
 
 #load file
 data = pd.read_csv(file_path, sep ="\t")
-# remove node names, res name, and hubs
+#remove node names, res name, and hubs
 colnames = list(data.columns)[2:]
 new_colnames = replace_dict(colnames)
 data = data.rename(columns = dict(zip(colnames, new_colnames)))
@@ -106,32 +121,20 @@ data = data.rename(columns = dict(zip(colnames, new_colnames)))
 sds = [3]
 # plot basic
 basic = ['degree', 'betweenness', 'closeness', 'eigenvector']
-plot_centrality_vs_residues(data, basic, sds, "basic")
+if args.basic:
+    print("plotting centrality vs residues for basic cenralities")
+    plot_centrality_vs_residues(data, basic, sds, "basic", out_dir)
 # plot only flow centralities
 flow = ['current_betweenness_c0', 'current_closeness_c0', 'current_betweenness_c1', 'current_closeness_c1', 'current_betweenness_c2', 'current_closeness_c2']
-if PLOT:
-    plot_centrality_vs_residues(data, flow, sds, "flow")
+if args.flow:
+    print("plotting centrality vs residues for flow cenralities")
+    plot_centrality_vs_residues(data, flow, sds, "flow", out_dir)
+if args.heatmap:
     #plot heatmap
-    heatmap(data, new_colnames, "flow") #xticklabels
+    print("plotting heatmap for all cenralities")
+    heatmap(data, data.columns, "flow", out_dir) #xticklabels
 
-#combine connected component cols
-
-def combine_cols(data, cc_cols):
-    for col in cc_cols:
-        individual_cols = [name for name in new_colnames if col in name]
-        combined = data[individual_cols].sum(axis = 1)
-        data[f"{col}_c"] = combined
-        x = individual_cols + [f"{col}_c"]
-        data = data.drop(columns = individual_cols)
-    return data
-
-del_cols = ["current_betweenness", "current_closeness"] #maybe add communicability later on
-data_combined = combine_cols(data, del_cols)
-combined_colnames = list(data_combined.columns)[2:]
-#plot 2
-if PLOT:
-    heatmap(data_combined, combined_colnames, "flow_combined")
-    plot_centrality_vs_residues(data_combined, combined_colnames, sds, "flow_combined", (10, 20))
+# network plots
 
 def remove_isolates(G):
     """Takes in a graph and returns a new graph where all the nodes with 
@@ -160,8 +163,7 @@ def get_reduced_df(df, H):
     reduced_df = df.loc[df['node'].isin(node_list)]
     return reduced_df, pos
 
-
-def plot_graph(G, df, measure):
+def plot_graph(G, pos, df, measure, out_dir):
     nodes = df['node']
     lab = {node:node[1:] for node in nodes}
     weights = df[measure]
@@ -174,47 +176,64 @@ def plot_graph(G, df, measure):
     plt.savefig(f'{out_dir}{measure}_graph.png')
     plt.clf()
 
+def get_plot_requirements(matrix, pdb, cent_df):
+    nodes, G = build_graph(matrix, pdb)
+    H = remove_isolates(G)
+    C = keep_largest_comonent(G)
+    data_largest_comp, pos = get_reduced_df(cent_df, C)
+    return data_largest_comp, pos, C
 
-plt.clf()
-nodes, G = build_graph("hc_graph_filtered.dat", "model0_A.pdb")
-H = remove_isolates(G)
-C = keep_largest_comonent(G)
-data_largest_comp, pos = get_reduced_df(data, C)
-
-# if PLOT:
-#     for col in basic:
-#         plot_graph(C, data_largest_comp, col)
-for col in basic:
-    plot_graph(C, data_largest_comp, col)
-
-plt.clf()
-comps = nx.algorithms.components.connected_components(G)
-comps_size = sorted([len(c) for c in comps], reverse= True)
-plt.plot(comps_size)
-for i, length in enumerate(comps_size):
-    if length > 1:
-        plt.annotate(length, (i, length))
-plt.savefig("comp_size.png")
-print(sum(comps_size))
+if args.graph:
+    data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
+                                                      pdb = args.inp_pdb, 
+                                                      cent_df = data)
+    for col in basic:
+        print("Plotting network for all basic components")
+        plot_graph(G = C, pos = pos, df = data_largest_comp, 
+                   measure = col, out_dir = out_dir)
 
 
-# def plot_centrality_vs_residues(data, columns, sds, fname = ""):
-#     #BACKUP
-#     for sd in sds:
-#         fig, axs = plt.subplots(len(columns), figsize = (10, 20), sharex= True, sharey= False)
-#         for i, colname in enumerate(columns):
-#             axs[i].plot(data[colname], label = colname)
-#             axs[i].set_title(colname)
-#             mean_std = [data[colname].mean(), data[colname].std()]
-#             cutoff = mean_std[0] + sd*mean_std[1]
-#             for j, val in enumerate(data[colname]):
-#                 if val > cutoff:
-#                     axs[i].annotate(data['node'][j], (j, val))
-#             axs[i].hlines(y = cutoff, xmin = 0, xmax = len(data['node']), linestyles = "dashed") 
-#         # for ax in axs.flat:
-#         #     ax.set(ylabel='Centrality Value')
-#         plt.xlabel("Residues")
-#         #plt.ylabel("Centrality value")
-#         #plt.legend()
-#         plt.savefig(f"{out_dir}/centrality_{sd}_{fname}.pdf")
-#         plt.clf()
+if args.size:
+    nodes, G = build_graph(args.inp_dat, args.inp_pdb)
+    comps = nx.algorithms.components.connected_components(G)
+    comps_size = sorted([len(c) for c in comps], reverse= True)
+    print("Plotting size of components")
+    plt.plot(comps_size)
+    for i, length in enumerate(comps_size):
+        if length > 1:
+            plt.annotate(length, (i, length))
+    plt.savefig(f"{out_dir}comp_size.png")
+    
+
+
+def get_df_basic(fname):
+    df = pd.read_csv(fname, sep ="\t")
+    colnames = ["degree", "betweenness", "closeness", "eigenvector"]
+    df = df[colnames]
+    return df
+
+def get_diff_df(wt, mut, abs = True):
+    node_wt = pd.read_csv(wt, sep = "\t")['node']
+    node_mut = pd.read_csv(mut, sep = "\t")['node']
+    assert node_wt.shape == node_mut.shape
+    wt_df = get_df_basic(wt)
+    mt_df = get_df_basic(mut)
+    diff_df = (wt_df - mt_df).abs() if abs else wt_df - mt_df
+    diff_df['node'] = node_wt
+    return diff_df
+
+
+if args.d_graph:
+    if args.wt and args.mut:
+        diff_df = get_diff_df(args.wt, args.mut)
+        data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
+                                                          pdb = args.inp_pdb, 
+                                                          cent_df = diff_df)
+        for col in basic:
+            print("Plotting network for all basic components")
+            plot_graph(G = C, pos = pos, df = data_largest_comp, 
+                    measure = col, out_dir = f"{out_dir}diff_")
+        
+    else:
+        print("ERROR: Specify WT and Mut files. Exiting...")
+        exit(1)
