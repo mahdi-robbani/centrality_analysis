@@ -117,12 +117,14 @@ def write_pdb_files(df, pdb, fname):
             # Replace column and save PDB file
             replace_bfac_column(pdb, cent_array, f"{fname}_{col}.pdb")
 
-#write_pdb_files(diff_df, pdb, "pdb/diff")
+write_pdb_files(diff_df, pdb, "pdb/diff")
 
 scaled_diff_df = get_diff_df(wt_df, mt_df, scale = True, abs = False)
 scaled_diff_df['node'] = node
 scaled_diff_nodes = plot_centrality_vs_residues(scaled_diff_df, list(scaled_diff_df.columns)[:-1], [3], "scaled_diff")
 print(get_count(scaled_diff_nodes))
+
+write_pdb_files(scaled_diff_df, pdb, "pdb/scaled_diff")
 
 
 
