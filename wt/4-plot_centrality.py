@@ -46,8 +46,6 @@ def build_graph(fname, pdb = None):
             raise Exception(f"Could not parse pdb file: {pdb}")
         # generate identifiers for the nodes of the graph
         identifiers = [f"{r.segment.segid}{r.resnum}" for r in u.residues]
-        for r in u.residues:
-            print(r.resname)
     # if the user did not provide a reference structure
     else:
         # generate automatic identifiers going from 1 to the
@@ -112,7 +110,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, size = (9, 7
                 cutoff = mean_std[0] + sd*mean_std[1]
                 for j, val in enumerate(data[columns[i]]):
                     if val > cutoff:
-                        ax.annotate(data['node'][j], (j, val))
+                        ax.annotate(COVERT_DICT[data['node'][j]], (j, val))
                 ax.hlines(y = cutoff, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
                 if i % 2 == 0:
                     ax.set(ylabel='Centrality Value')
@@ -134,13 +132,14 @@ def heatmap(data, colnames, fname, oudir):
     plt.savefig(f"{out_dir}/correlation_{fname}.pdf")
     plt.clf()
 
-def convert_node_name(data):
-    data['node'] = [RES_DICT[data['name'][i]] + n[1:] for i, n in enumerate(data['node'])]
-    return data
+def node_convert_dict(data):
+    new_nodes = [RES_DICT[data['name'][i]] + n[1:] for i, n in enumerate(data['node'])]
+    node_convert_dict = dict(zip(data['node'], new_nodes))
+    return node_convert_dict
 
 #load file
 data = pd.read_csv(file_path, sep ="\t")
-data = convert_node_name(data)
+COVERT_DICT = node_convert_dict(data)
 #remove node names, res name, and hubs
 colnames = list(data.columns)[2:]
 new_colnames = replace_dict(colnames)
@@ -195,13 +194,15 @@ def get_reduced_df(df, H):
 def plot_graph(G, pos, df, measure, out_dir):
     nodes = df['node']
     lab = {node:node[1:] for node in nodes}
+    #lab = {node:COVERT_DICT[node] for node in nodes}
     weights = df[measure]
     ec = nx.draw_networkx_edges(G, pos)
     nc = nx.draw_networkx_nodes(G, pos, nodelist = nodes, node_color = weights, cmap = plt.cm.hot, edgecolors='black', vmax = WT_DICT[measure])
     plt.colorbar(nc)
     nx.draw_networkx_labels(G, pos, labels = lab, font_size=9, font_color ='midnightblue')
     plt.axis('off')
-    plt.title(f"{measure} centrality")
+    plt.tight_layout()
+    plt.title(f"{measure.capitalize()} centrality")
     plt.savefig(f'{out_dir}{measure}_graph.png')
     plt.clf()
 
@@ -217,7 +218,7 @@ if args.graph:
                                                       pdb = args.inp_pdb, 
                                                       cent_df = data)
     for col in basic:
-        print("Plotting network for all basic components")
+        print(f"Plotting network for all basic components: {col}")
         plot_graph(G = C, pos = pos, df = data_largest_comp, 
                    measure = col, out_dir = out_dir)
 
@@ -251,7 +252,6 @@ def get_diff_df(wt, mut, abs = True):
     diff_df['node'] = node_wt
     return diff_df
 
-
 if args.d_graph:
     if args.wt and args.mut:
         diff_df = get_diff_df(args.wt, args.mut)
@@ -259,7 +259,7 @@ if args.d_graph:
                                                           pdb = args.inp_pdb, 
                                                           cent_df = diff_df)
         for col in basic:
-            print("Plotting network for all basic components")
+            print(f"Plotting network for all basic components: {col}")
             plot_graph(G = C, pos = pos, df = data_largest_comp, 
                     measure = col, out_dir = f"{out_dir}diff_")
         
