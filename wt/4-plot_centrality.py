@@ -16,6 +16,16 @@ RANGE_DICT = {"degree": 0.035,
               "closeness": 0.10,
               "eigenvector": 0.55}
 
+RES_DICT = {
+    'ALA':  'A','ARG':	'R','ASN':	'N','ASP':	'D',
+    'ASX':	'B','CYS':	'C','GLU':	'E','GLN':	'Q',
+    'GLX':	'Z','GLY':	'G','HIS':	'H','ILE':	'I',
+    'LEU':	'L','LYS':	'K','MET':	'M','PHE':	'F',
+    'PRO':	'P','SER':	'S','THR':	'T','TRP':	'W',
+    'TYR':	'Y','VAL':	'V'
+    }
+
+
 # Helper functions
 def build_graph(fname, pdb = None):
     """Build a graph from the provided matrix"""
@@ -36,6 +46,8 @@ def build_graph(fname, pdb = None):
             raise Exception(f"Could not parse pdb file: {pdb}")
         # generate identifiers for the nodes of the graph
         identifiers = [f"{r.segment.segid}{r.resnum}" for r in u.residues]
+        for r in u.residues:
+            print(r.resname)
     # if the user did not provide a reference structure
     else:
         # generate automatic identifiers going from 1 to the
@@ -94,7 +106,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, size = (9, 7
         for i, ax in enumerate(axs.flat):
             if i < len(columns):
                 ax.plot(data[columns[i]], label = columns[i])
-                ax.set_title(columns[i])
+                ax.set_title(columns[i].capitalize())
                 ax.set_ylim(top = RANGE_DICT[columns[i]])
                 mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
                 cutoff = mean_std[0] + sd*mean_std[1]
@@ -102,14 +114,15 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, size = (9, 7
                     if val > cutoff:
                         ax.annotate(data['node'][j], (j, val))
                 ax.hlines(y = cutoff, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
-                ax.set(xlabel = 'residues', ylabel='Centrality Value')
+                if i % 2 == 0:
+                    ax.set(ylabel='Centrality Value')
+                if i == (nrows*2)-2 or i == (nrows*2)-1:
+                    ax.set(xlabel='Residues')
+                #ax.set(xlabel = 'residues', ylabel='Centrality Value')
+                ax.grid()
             else:
                 ax.set_visible(False)
-        # for ax in axs.flat:
-        #     ax.set(ylabel='Centrality Value')
-        #plt.xlabel("Residues")
-        #plt.ylabel("Centrality value")
-        #plt.legend()
+        fig.tight_layout()
         plt.savefig(f"{out_dir}/centrality_{sd}_{fname}.pdf")
         plt.clf()
 
@@ -121,8 +134,13 @@ def heatmap(data, colnames, fname, oudir):
     plt.savefig(f"{out_dir}/correlation_{fname}.pdf")
     plt.clf()
 
+def convert_node_name(data):
+    data['node'] = [RES_DICT[data['name'][i]] + n[1:] for i, n in enumerate(data['node'])]
+    return data
+
 #load file
 data = pd.read_csv(file_path, sep ="\t")
+data = convert_node_name(data)
 #remove node names, res name, and hubs
 colnames = list(data.columns)[2:]
 new_colnames = replace_dict(colnames)
