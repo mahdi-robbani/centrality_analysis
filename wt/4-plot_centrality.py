@@ -25,74 +25,55 @@ RES_DICT = {
     'TYR':	'Y','VAL':	'V'
     }
 
+# data preprocessing functions
 
-# Helper functions
-def build_graph(fname, pdb = None):
-    """Build a graph from the provided matrix"""
+def get_res_column(data):
+    return [RES_DICT[data['name'][i]] + n[1:] for i, n in enumerate(data['node'])]
 
-    try:
-        adj_matrix = np.loadtxt(fname)
-    except:
-        errstr = f"Could not load file {fname} or wrong file format."
-        raise ValueError(errstr)
-    # if the user provided a reference structure
-    if pdb is not None:
-        try:
-            # generate a Universe object from the PDB file
-            u = mda.Universe(pdb)
-        except FileNotFoundError:
-            raise FileNotFoundError(f"PDB not found: {pdb}")
-        except:
-            raise Exception(f"Could not parse pdb file: {pdb}")
-        # generate identifiers for the nodes of the graph
-        identifiers = [f"{r.segment.segid}{r.resnum}" for r in u.residues]
-    # if the user did not provide a reference structure
-    else:
-        # generate automatic identifiers going from 1 to the
-        # total number of residues considered
-        identifiers = [f"_{i}" for i in range(1, adj_matrix.shape[0]+1)]
-    
-    # generate a graph from the data loaded
-    G = nx.Graph(adj_matrix)
-    # set the names of the graph nodes (in place)
-    node_names = dict(zip(range(adj_matrix.shape[0]), identifiers))
-    nx.relabel_nodes(G, mapping = node_names, copy = False)
-    # return the idenfiers and the graph
-    return identifiers, G
+def get_new_col_names(data):
+    return [f"CF_{'_'.join(c.split('_')[2:])}" if "current_flow" in c else c.capitalize() for c in data.columns]
 
-def replace_dict(names):
-    new_names = []
-    for name in names:
-        if "_" in name:
-            name = name.split("_")
-            new_name = '_'.join((name[0], name[-2], name[-1]))
-            new_names.append(new_name)
-        else:
-            new_names.append(name)
-    return new_names
+def load_centrality(file):
+    # load file
+    data = pd.read_csv(file, sep ="\t")
+    # add residue column
+    data['residue'] = get_res_column(data)
+    # get new names
+    new_colnames = get_new_col_names(data)
+    # repalce col names
+    data = data.rename(columns = dict(zip(data.columns, new_colnames)))
+    return data
 
+def load_sasa(file):
+    data = pd.read_csv(file, sep = "\t")
+    data['SASA'] = data['Mean']
+    data['Node'] = data['ID'].apply(lambda x: 'A' + str(x))
+    return data
 
-
-
-
+def combine_cent_sasa(cent_file, sasa_file):
+    cent = load_centrality(cent_file)
+    sasa = load_sasa(sasa_file)
+    sasa = sasa.drop(columns = ['Name'])
+    data = cent.merge(sasa, on = 'Node')
+    return data
 
 # plotting functions
 
 def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, size = (9, 7)):
     nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
     for sd in sds:
-        fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= False)
+        fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= True)
         for i, ax in enumerate(axs.flat):
             if i < len(columns):
                 ax.plot(data[columns[i]], label = columns[i])
-                ax.set_title(columns[i].capitalize())
-                ax.set_ylim(top = RANGE_DICT[columns[i]])
+                ax.set_title(columns[i])
+                # ax.set_ylim(top = RANGE_DICT[columns[i]])
                 mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
                 cutoff = mean_std[0] + sd*mean_std[1]
                 for j, val in enumerate(data[columns[i]]):
                     if val > cutoff:
-                        ax.annotate(COVERT_DICT[data['node'][j]], (j, val))
-                ax.hlines(y = cutoff, xmin = 0, xmax = len(data['node']), linestyles = "dashed")
+                        ax.annotate(data['Residue'][j], (j, val))
+                ax.hlines(y = cutoff, xmin = 0, xmax = len(data['Node']), linestyles = "dashed")
                 if i % 2 == 0:
                     ax.set(ylabel='Centrality Value')
                 if i == (nrows*2)-2 or i == (nrows*2)-1:
@@ -108,10 +89,110 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, size = (9, 7
 def heatmap(data, colnames, fname, oudir):
     cor = data[colnames].corr().round(2)
     plt.figure(figsize=(10,8))
-    sns.heatmap(cor, cmap="viridis", annot = True, vmin = 0, vmax = 1)
+    sns.heatmap(cor, cmap="RdBu_r", annot = True)
     plt.tight_layout()
     plt.savefig(f"{out_dir}/correlation_{fname}.pdf")
     plt.clf()
+
+
+# set directory and files
+cent_file = "centrality/wt.txt"
+sasa_file = "sasa.txt"
+out_dir = "plots/"
+
+# load and fix df
+data = combine_cent_sasa(cent_file, sasa_file)
+# get colnames
+basic_cols = ['Degree', 'Betweenness', 'Closeness', 'Eigenvector']
+cf_cols = [c for c in data.columns if "CF_" in c]
+cf_cols = sorted(cf_cols, key = lambda c : c.split('_')[2:])
+
+#plot toggles
+CENT_B = True
+CENT_CF = True
+CORR = True
+
+
+
+# plot centrality vs residues
+
+sds = [3]
+
+# plot basic
+if CENT_B:
+    print("plotting centrality vs residues for basic cenralities")
+    plot_centrality_vs_residues(data, basic_cols, sds, "basic", out_dir)
+# plot only flow centralities
+if CENT_CF:
+    print("plotting centrality vs residues for CF cenralities")
+    plot_centrality_vs_residues(data, cf_cols, sds, "cf", out_dir)
+
+# plot heatmap
+if CORR:
+    #plot heatmap
+    print("plotting heatmap for all cenralities")
+    sasa_cols = basic_cols + cf_cols + ['SASA']
+    heatmap(data, sasa_cols, "sasa", out_dir)
+
+
+
+# if args.graph:
+#     data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
+#                                                       pdb = args.inp_pdb, 
+#                                                       cent_df = data)
+#     for col in basic:
+#         print(f"Plotting network for all basic components: {col}")
+#         plot_graph(G = C, pos = pos, df = data_largest_comp, 
+#                    measure = col, out_dir = out_dir)
+
+
+# if args.size:
+#     nodes, G = build_graph(args.inp_dat, args.inp_pdb)
+#     comps = nx.algorithms.components.connected_components(G)
+#     comps_size = sorted([len(c) for c in comps], reverse= True)
+#     print("Plotting size of components")
+#     plt.plot(comps_size)
+#     for i, length in enumerate(comps_size):
+#         if length > 1:
+#             plt.annotate(length, (i, length))
+#     plt.savefig(f"{out_dir}comp_size.png")
+    
+
+
+# def get_df_basic(fname):
+#     df = pd.read_csv(fname, sep ="\t")
+#     colnames = ["degree", "betweenness", "closeness", "eigenvector"]
+#     df = df[colnames]
+#     return df
+
+# def get_diff_df(wt, mut, abs = True):
+#     node_wt = pd.read_csv(wt, sep = "\t")['node']
+#     node_mut = pd.read_csv(mut, sep = "\t")['node']
+#     assert node_wt.shape == node_mut.shape
+#     wt_df = get_df_basic(wt)
+#     mt_df = get_df_basic(mut)
+#     diff_df = (wt_df - mt_df).abs() if abs else wt_df - mt_df
+#     diff_df['node'] = node_wt
+#     return diff_df
+
+# if args.d_graph:
+#     if args.wt and args.mut:
+#         diff_df = get_diff_df(args.wt, args.mut)
+#         data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
+#                                                           pdb = args.inp_pdb, 
+#                                                           cent_df = diff_df)
+#         for col in basic:
+#             print(f"Plotting network for all basic components: {col}")
+#             plot_graph(G = C, pos = pos, df = data_largest_comp, 
+#                     measure = col, out_dir = f"{out_dir}diff_")
+        
+#     else:
+#         print("ERROR: Specify WT and Mut files. Exiting...")
+#         exit(1)
+
+
+
+
 
 def node_convert_dict(data):
     new_nodes = [RES_DICT[data['name'][i]] + n[1:] for i, n in enumerate(data['node'])]
@@ -169,121 +250,36 @@ def get_plot_requirements(matrix, pdb, cent_df):
     data_largest_comp, pos = get_reduced_df(cent_df, C)
     return data_largest_comp, pos, C
 
-# new functions
+# Helper functions
+def build_graph(fname, pdb = None):
+    """Build a graph from the provided matrix"""
 
-def get_res_column(data):
-    return [RES_DICT[data['name'][i]] + n[1:] for i, n in enumerate(data['node'])]
-
-def get_new_col_names(data):
-    return [f"CF_{'_'.join(c.split('_')[2:])}" if "current_flow" in c else c.capitalize() for c in data.columns]
-
-def load_centrality(file):
-    # load file
-    data = pd.read_csv(file, sep ="\t")
-    # add residue column
-    data['residue'] = get_res_column(data)
-    # get new names
-    new_colnames = get_new_col_names(data)
-    # repalce col names
-    data = data.rename(columns = dict(zip(data.columns, new_colnames)))
-    return data
-
-def load_sasa(file):
-    data = pd.read_csv(file, sep = "\t")
-    data['SASA'] = data['Mean']
-    data['Node'] = data['ID'].apply(lambda x: 'A' + str(x))
-    return data
-
-def combine_cent_sasa(cent_file, sasa_file):
-    cent = load_centrality(cent_file)
-    sasa = load_sasa(sasa_file)
-    sasa = sasa.drop(columns = ['Name'])
-    data = cent.merge(sasa, on = 'Node')
-    return data
-
-# set directory and files
-cent_file = "centrality/wt.txt"
-sasa_file = "sasa.txt"
-out_dir = "plots/"
-
-# load and fix df
-data = combine_cent_sasa(cent_file, sasa_file)
-# get colnames
-basic_cols = ['Degree', 'Betweenness', 'Closeness', 'Eigenvector']
-cf_cols = [c for c in data.columns if "CF_" in c]
-
-print(data)
-
-
-# #plot centrality vs residues
-# sds = [3]
-# # plot basic
-# basic = ['degree', 'betweenness', 'closeness', 'eigenvector']
-# if args.basic:
-#     print("plotting centrality vs residues for basic cenralities")
-#     plot_centrality_vs_residues(data, basic, sds, "basic", out_dir)
-# # plot only flow centralities
-# flow = ['current_betweenness_c0', 'current_closeness_c0', 'current_betweenness_c1', 'current_closeness_c1', 'current_betweenness_c2', 'current_closeness_c2']
-# if args.flow:
-#     print("plotting centrality vs residues for flow cenralities")
-#     plot_centrality_vs_residues(data, flow, sds, "flow", out_dir)
-# if args.heatmap:
-#     #plot heatmap
-#     print("plotting heatmap for all cenralities")
-#     heatmap(data, data.columns, "flow", out_dir) #xticklabels
-
-
-
-# if args.graph:
-#     data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
-#                                                       pdb = args.inp_pdb, 
-#                                                       cent_df = data)
-#     for col in basic:
-#         print(f"Plotting network for all basic components: {col}")
-#         plot_graph(G = C, pos = pos, df = data_largest_comp, 
-#                    measure = col, out_dir = out_dir)
-
-
-# if args.size:
-#     nodes, G = build_graph(args.inp_dat, args.inp_pdb)
-#     comps = nx.algorithms.components.connected_components(G)
-#     comps_size = sorted([len(c) for c in comps], reverse= True)
-#     print("Plotting size of components")
-#     plt.plot(comps_size)
-#     for i, length in enumerate(comps_size):
-#         if length > 1:
-#             plt.annotate(length, (i, length))
-#     plt.savefig(f"{out_dir}comp_size.png")
+    try:
+        adj_matrix = np.loadtxt(fname)
+    except:
+        errstr = f"Could not load file {fname} or wrong file format."
+        raise ValueError(errstr)
+    # if the user provided a reference structure
+    if pdb is not None:
+        try:
+            # generate a Universe object from the PDB file
+            u = mda.Universe(pdb)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"PDB not found: {pdb}")
+        except:
+            raise Exception(f"Could not parse pdb file: {pdb}")
+        # generate identifiers for the nodes of the graph
+        identifiers = [f"{r.segment.segid}{r.resnum}" for r in u.residues]
+    # if the user did not provide a reference structure
+    else:
+        # generate automatic identifiers going from 1 to the
+        # total number of residues considered
+        identifiers = [f"_{i}" for i in range(1, adj_matrix.shape[0]+1)]
     
-
-
-# def get_df_basic(fname):
-#     df = pd.read_csv(fname, sep ="\t")
-#     colnames = ["degree", "betweenness", "closeness", "eigenvector"]
-#     df = df[colnames]
-#     return df
-
-# def get_diff_df(wt, mut, abs = True):
-#     node_wt = pd.read_csv(wt, sep = "\t")['node']
-#     node_mut = pd.read_csv(mut, sep = "\t")['node']
-#     assert node_wt.shape == node_mut.shape
-#     wt_df = get_df_basic(wt)
-#     mt_df = get_df_basic(mut)
-#     diff_df = (wt_df - mt_df).abs() if abs else wt_df - mt_df
-#     diff_df['node'] = node_wt
-#     return diff_df
-
-# if args.d_graph:
-#     if args.wt and args.mut:
-#         diff_df = get_diff_df(args.wt, args.mut)
-#         data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
-#                                                           pdb = args.inp_pdb, 
-#                                                           cent_df = diff_df)
-#         for col in basic:
-#             print(f"Plotting network for all basic components: {col}")
-#             plot_graph(G = C, pos = pos, df = data_largest_comp, 
-#                     measure = col, out_dir = f"{out_dir}diff_")
-        
-#     else:
-#         print("ERROR: Specify WT and Mut files. Exiting...")
-#         exit(1)
+    # generate a graph from the data loaded
+    G = nx.Graph(adj_matrix)
+    # set the names of the graph nodes (in place)
+    node_names = dict(zip(range(adj_matrix.shape[0]), identifiers))
+    nx.relabel_nodes(G, mapping = node_names, copy = False)
+    # return the idenfiers and the graph
+    return identifiers, G
