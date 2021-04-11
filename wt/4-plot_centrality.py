@@ -188,15 +188,31 @@ def load_centrality(file):
     data = data.rename(columns = dict(zip(data.columns, new_colnames)))
     return data
 
+def load_sasa(file):
+    data = pd.read_csv(file, sep = "\t")
+    data['SASA'] = data['Mean']
+    data['Node'] = data['ID'].apply(lambda x: 'A' + str(x))
+    return data
+
+def combine_cent_sasa(cent_file, sasa_file):
+    cent = load_centrality(cent_file)
+    sasa = load_sasa(sasa_file)
+    sasa = sasa.drop(columns = ['Name'])
+    data = cent.merge(sasa, on = 'Node')
+    return data
+
 # set directory and files
 cent_file = "centrality/wt.txt"
-out_dir = f"plots/"
+sasa_file = "sasa.txt"
+out_dir = "plots/"
 
 # load and fix df
-data = load_centrality(cent_file)
+data = combine_cent_sasa(cent_file, sasa_file)
 # get colnames
 basic_cols = ['Degree', 'Betweenness', 'Closeness', 'Eigenvector']
 cf_cols = [c for c in data.columns if "CF_" in c]
+
+print(data)
 
 
 # #plot centrality vs residues
