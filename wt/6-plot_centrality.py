@@ -6,6 +6,7 @@ import networkx as nx
 import MDAnalysis as mda
 import argparse
 import pickle
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 WT_DICT = {"Degree": 0.030864,
               "Betweenness": 0.144122,
@@ -108,10 +109,13 @@ def heatmap(data, colnames, fname, oudir):
 
 # set directory and files
 cent_file = "centrality/wt.txt"
+#cent_file = "unfiltered/wt_unfilterd.txt"
 sasa_file = "sasa.txt"
 psn_file = "hc_graph_filtered.dat"
+#psn_file = "hc_graph.dat"
 pdb_file = "model0_A.pdb"
 out_dir = "plots/"
+#out_dir = "unfiltered/"
 
 # load and fix df
 data = combine_cent_sasa(cent_file, sasa_file)
@@ -207,19 +211,24 @@ def get_graph_pos(psn, pdb):
     # H.add_weighted_edges_from(weighted_edges)
     H = G
     # k = 0.5, iterations = 100
-    pos = nx.spring_layout(H, k = 0.5, seed = 1, iterations = 100)
+    pos = nx.spring_layout(H, k = 0.55, seed = 1, iterations = 100)
     save_pos(pos)
     return H, pos
 
 def plot_graph(G, pos, df, measure, out_dir):
-    nodes = G.nodes()
-    lab = {node:node[1:] for node in nodes}
+    isolates = list(nx.isolates(G))
+    connected = [node for node in G.nodes() if node not in isolates]
+    lab = {node:node[1:] for node in G.nodes()}
     #lab = {node:COVERT_DICT[node] for node in nodes}
     #weights = df[measure]
-    weights = df[df['Node'].isin(nodes)][measure]
+    c_weight = df[df['Node'].isin(connected)][measure]
+    i_weight = df[df['Node'].isin(isolates)][measure]
     fig, ax = plt.subplots(figsize = (14,10))
     ec = nx.draw_networkx_edges(G, pos)
-    nc = nx.draw_networkx_nodes(G, pos, node_size = 300, nodelist = nodes, node_color = weights, cmap = plt.cm.RdBu_r, edgecolors='black', vmax = WT_DICT[measure])
+    colors = ["royalblue", "violet", "crimson"]
+    RdPuBu = LinearSegmentedColormap.from_list("RdPuBu", colors)
+    nx.draw_networkx_nodes(G, pos, node_size = 250, nodelist = isolates, node_color = 'white', edgecolors='black', vmax = WT_DICT[measure])
+    nc = nx.draw_networkx_nodes(G, pos, node_size = 450, nodelist = connected, node_color = c_weight, cmap = RdPuBu, edgecolors='black', vmax = WT_DICT[measure])
     plt.colorbar(nc)
     nx.draw_networkx_labels(G, pos, labels = lab, font_size=9, font_color = 'black')
     plt.axis('off')
