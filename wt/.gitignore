@@ -1,3 +1,6 @@
 acc_*
 SOLV/
 centrality/*.pdb
+plots/
+test/
+unfiltered/
