@@ -233,8 +233,8 @@ if NETWORK:
     for measure in basic_cols:
         print(f"Plotting network: {measure}")
         plot_graph(G, pos, data, measure, out_dir)
-        if measure == "Betweenness":
-            break
+        # if measure == "Betweenness":
+        #     break
 
 
 # if args.graph:
