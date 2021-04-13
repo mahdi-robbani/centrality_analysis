@@ -7,6 +7,7 @@ import MDAnalysis as mda
 import argparse
 import pickle
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from collections import Counter
 
 WT_DICT = {"Degree": 0.030864,
               "Betweenness": 0.144122,
@@ -69,6 +70,7 @@ def combine_cent_sasa(cent_file, sasa_file):
 # plotting functions
 
 def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max_range = None, size = (9, 7)):
+    node_dict = {}
     nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
     for sd in sds:
         fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= share_y)
@@ -82,9 +84,12 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max
                     ax.set_ylim(top = RANGE_DICT[columns[i]])
                 mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
                 cutoff = mean_std[0] + sd*mean_std[1]
+                node_list = []
                 for j, val in enumerate(data[columns[i]]):
                     if val > cutoff:
                         ax.annotate(data['Residue'][j], (j, val))
+                        node_list.append(data['Residue'][j])
+                node_dict.update({columns[i] : node_list})
                 ax.hlines(y = cutoff, xmin = 0, xmax = len(data['Node']), linestyles = "dashed")
                 if i % 2 == 0:
                     ax.set(ylabel='Centrality Value')
@@ -97,6 +102,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max
         fig.tight_layout()
         plt.savefig(f"{out_dir}/centrality_{sd}_{fname}.pdf")
         plt.clf()
+    return node_dict
 
 def heatmap(data, colnames, fname, oudir):
     cor = data[colnames].corr().round(2)
@@ -132,6 +138,15 @@ CORR = plot
 NETWORK = True
 
 
+def get_count(node_dict):
+    print(node_dict)
+    node_list = []
+    for nodes in node_dict.values():
+        node_list += nodes
+    cnt = Counter(node_list)
+    node_list = [n for n, c in cnt.items()]
+    return node_list
+
 # plot centrality vs residues
 
 sds = [3]
@@ -140,9 +155,12 @@ sds = [3]
 if CENT_B:
     print("plotting centrality vs residues for basic cenralities")
     # plot custom plots (defined by range dict)
-    plot_centrality_vs_residues(data, basic_cols, sds, "basic", out_dir, share_y = False, max_range = "range_dict")
+    wt_nodes = plot_centrality_vs_residues(data, basic_cols, sds, "basic", out_dir, share_y = False, max_range = "range_dict")
+    print(get_count(wt_nodes))
     # Plot absolute plots (max range [0-1])
     plot_centrality_vs_residues(data, basic_cols, sds, "basic_m", out_dir, share_y = False, max_range = "max")
+
+
 # plot only flow centralities
 if CENT_CF:
     print("plotting centrality vs residues for CF cenralities")
@@ -150,6 +168,9 @@ if CENT_CF:
     plot_centrality_vs_residues(data, cf_cols, sds, "cf", out_dir, share_y = False, max_range = "range_dict")
     # Plot absolute plots (max range [0-1])
     plot_centrality_vs_residues(data, cf_cols, sds, "cf_m", out_dir, share_y = False, max_range = "max")
+
+
+
 
 # plot heatmap
 if CORR:
@@ -218,19 +239,24 @@ def get_graph_pos(psn, pdb):
 def plot_graph(G, pos, df, measure, out_dir):
     isolates = list(nx.isolates(G))
     connected = [node for node in G.nodes() if node not in isolates]
-    lab = {node:node[1:] for node in G.nodes()}
+    isolates_lab = {node:node[1:] for node in isolates}
+    connected_lab = {node:node[1:] for node in connected}
+    active_site = [55,60,102,113,122,126]
+    acitve_lab = {f"A{str(node)}" : str(node) for node in active_site}
     #lab = {node:COVERT_DICT[node] for node in nodes}
     #weights = df[measure]
     c_weight = df[df['Node'].isin(connected)][measure]
     i_weight = df[df['Node'].isin(isolates)][measure]
     fig, ax = plt.subplots(figsize = (14,10))
     ec = nx.draw_networkx_edges(G, pos)
-    colors = ["royalblue", "violet", "crimson"]
+    colors = ["blue", "purple", "red"]
     RdPuBu = LinearSegmentedColormap.from_list("RdPuBu", colors)
     nx.draw_networkx_nodes(G, pos, node_size = 250, nodelist = isolates, node_color = 'white', edgecolors='black', vmax = WT_DICT[measure])
     nc = nx.draw_networkx_nodes(G, pos, node_size = 450, nodelist = connected, node_color = c_weight, cmap = RdPuBu, edgecolors='black', vmax = WT_DICT[measure])
     plt.colorbar(nc)
-    nx.draw_networkx_labels(G, pos, labels = lab, font_size=9, font_color = 'black')
+    nx.draw_networkx_labels(G, pos, labels = isolates_lab, font_size=9, font_color = 'black')
+    nx.draw_networkx_labels(G, pos, labels = connected_lab, font_size=9, font_color = 'white')
+    nx.draw_networkx_labels(G, pos, labels = acitve_lab, font_size=9, font_color = 'cyan')
     plt.axis('off')
     #plt.tight_layout()
     plt.title(f"{measure} centrality")
@@ -244,107 +270,4 @@ if NETWORK:
         plot_graph(G, pos, data, measure, out_dir)
         # if measure == "Betweenness":
         #     break
-
-
-# if args.graph:
-#     data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
-#                                                       pdb = args.inp_pdb, 
-#                                                       cent_df = data)
-#     for col in basic:
-#         print(f"Plotting network for all basic components: {col}")
-#         plot_graph(G = C, pos = pos, df = data_largest_comp, 
-#                    measure = col, out_dir = out_dir)
-
-
-# if args.size:
-#     nodes, G = build_graph(args.inp_dat, args.inp_pdb)
-#     comps = nx.algorithms.components.connected_components(G)
-#     comps_size = sorted([len(c) for c in comps], reverse= True)
-#     print("Plotting size of components")
-#     plt.plot(comps_size)
-#     for i, length in enumerate(comps_size):
-#         if length > 1:
-#             plt.annotate(length, (i, length))
-#     plt.savefig(f"{out_dir}comp_size.png")
-    
-
-
-# def get_df_basic(fname):
-#     df = pd.read_csv(fname, sep ="\t")
-#     colnames = ["degree", "betweenness", "closeness", "eigenvector"]
-#     df = df[colnames]
-#     return df
-
-# def get_diff_df(wt, mut, abs = True):
-#     node_wt = pd.read_csv(wt, sep = "\t")['node']
-#     node_mut = pd.read_csv(mut, sep = "\t")['node']
-#     assert node_wt.shape == node_mut.shape
-#     wt_df = get_df_basic(wt)
-#     mt_df = get_df_basic(mut)
-#     diff_df = (wt_df - mt_df).abs() if abs else wt_df - mt_df
-#     diff_df['node'] = node_wt
-#     return diff_df
-
-# if args.d_graph:
-#     if args.wt and args.mut:
-#         diff_df = get_diff_df(args.wt, args.mut)
-#         data_largest_comp, pos, C = get_plot_requirements(matrix = args.inp_dat, 
-#                                                           pdb = args.inp_pdb, 
-#                                                           cent_df = diff_df)
-#         for col in basic:
-#             print(f"Plotting network for all basic components: {col}")
-#             plot_graph(G = C, pos = pos, df = data_largest_comp, 
-#                     measure = col, out_dir = f"{out_dir}diff_")
-        
-#     else:
-#         print("ERROR: Specify WT and Mut files. Exiting...")
-#         exit(1)
-
-
-
-
-
-# def node_convert_dict(data):
-#     new_nodes = [RES_DICT[data['name'][i]] + n[1:] for i, n in enumerate(data['node'])]
-#     node_convert_dict = dict(zip(data['node'], new_nodes))
-#     return node_convert_dict
-
-# # network plots
-
-# def remove_isolates(G):
-#     """ Get graph without useless nodes
-#     """
-
-#     # create duplicate graph so the original is unaffected
-#     H = G.copy()
-#     # isolates are nodes with zero edges
-#     isolates = nx.isolates(G)
-#     # remove from duplicate graph
-#     H.remove_nodes_from(list(isolates))
-#     return H
-
-# def keep_largest_comonent(G):
-#     H = G.copy()
-#     components = nx.algorithms.components.connected_components(G)
-#     remove = sorted(components, key = lambda x: len(x))[:-1]
-#     for nodes in remove:
-#         H.remove_nodes_from(nodes)
-#     return H
-
-# def get_reduced_df(df, H):
-#     pos = nx.spring_layout(H, k = 0.5)
-#     node_list = H.nodes()
-#     reduced_df = df.loc[df['node'].isin(node_list)]
-#     return reduced_df, pos
-
-
-
-# def get_plot_requirements(matrix, pdb, cent_df):
-#     nodes, G = build_graph(matrix, pdb)
-#     H = remove_isolates(G)
-#     C = keep_largest_comonent(G)
-#     data_largest_comp, pos = get_reduced_df(cent_df, C)
-#     return data_largest_comp, pos, C
-
-# Helper functions for network
 
