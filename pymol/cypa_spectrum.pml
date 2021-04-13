@@ -18,14 +18,16 @@ align cc, s99t_betweenness
 
 # Change thickness according to b factor value
 hide everything
-spectrum b, blue_red, wt_betweenness, 0, 0.14
+spectrum b, blue_red, wt_betweenness, 0, 0.15
 spectrum b, blue_red, wt_closeness, 0, 0.07
-spectrum b, blue_red, wt_degree, 0, 0.03
-spectrum b, blue_red, wt_eigenvector, 0, 0.5
-spectrum b, blue_red, s99t_closeness, 0, 0.05
-spectrum b, blue_red, s99t_degree, 0, 0.03
-spectrum b, blue_red, s99t_eigenvector, 0, 0.5
-spectrum b, blue_red, s99t_betweenness, 0, 0.14
+spectrum b, blue_red, wt_degree, 0, 0.031
+spectrum b, blue_red, wt_eigenvector, 0, 0.52
+
+spectrum b, blue_red, s99t_betweenness, 0, 0.15
+spectrum b, blue_red, s99t_closeness, 0, 0.07
+spectrum b, blue_red, s99t_degree, 0, 0.031
+spectrum b, blue_red, s99t_eigenvector, 0, 0.52
+
 spectrum b, rainbow, cc
 as cartoon
 #show cartoon
@@ -38,7 +40,7 @@ bg_color white
 #select degree, resi 82+102+111 and (wt_degree or s99t_degree)
 #select betweenness, resi 99+100+108+113+127 and (wt_betweenness or s99t_betweenness)
 #select closeness, resi 66+84+125 and (wt_closeness or s99t_closeness)
-select eigenvector, resi 32+85+86+102+108+113+127 and (wt_eigenvector or s99t_eigenvector)
+#select eigenvector, resi 32+85+86+102+108+113+127 and (wt_eigenvector or s99t_eigenvector)
 
 # new selections
 select betweenness, resi 113+99+92+122+126+102+108+100+32+129+98+22+132+136+139+142+156+12 and (wt_betweenness or s99t_betweenness)
@@ -50,11 +52,12 @@ select eigenvector, resi 92+119+128+122+99 and (wt_eigenvector or s99t_eigenvect
 select active_site, resi 55+60+102+113+122+126
 
 # show stick
-show line, degree
-show line, betweenness
-show line, closeness
-show line, eigenvector
-show stick, active_site
+#show line, active_site
+show stick, degree
+show stick, betweenness
+show stick, closeness
+show stick, eigenvector
+
 
 # color selections
 #color green, degree
@@ -64,15 +67,20 @@ show stick, active_site
 #color green, active_site
 
 # label residues
-#label (active_site and name ca), resi
-#label (mutants and name ca), resi
-#label (imp_res and name ca), resi
 #label name ca, resi
 
 label (betweenness and name ca), resi
 label (closeness and name ca), resi
 label (degree and name ca), resi
 label (eigenvector and name ca), resi
+label (active_site and name ca), resi
+
+# label color
+set label_color, green, (betweenness and name ca)
+set label_color, green, (closeness and name ca)
+set label_color, green, (degree and name ca)
+set label_color, green, (eigenvector and name ca)
+set label_color, cyan, (active_site and name ca)
 
 #make compatible
 #set pse_export_version, 1.7
