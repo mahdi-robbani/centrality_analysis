@@ -100,7 +100,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max
             else:
                 ax.set_visible(False)
         fig.tight_layout()
-        plt.savefig(f"{out_dir}/centrality_{sd}_{fname}.pdf")
+        plt.savefig(f"{out_dir}/centrality_{sd}_{fname}{w}.pdf")
         plt.clf()
     return node_dict
 
@@ -109,12 +109,18 @@ def heatmap(data, colnames, fname, oudir):
     plt.figure(figsize=(10,8))
     sns.heatmap(cor, cmap="RdBu_r", annot = True)
     plt.tight_layout()
-    plt.savefig(f"{out_dir}/correlation_{fname}.pdf")
+    plt.savefig(f"{out_dir}/correlation_{fname}{w}.pdf")
     plt.clf()
 
 
 # set directory and files
-cent_file = "centrality/wt.txt"
+w = True
+if w:
+    cent_file = "centrality/wt_w.txt"
+    w = "_w"
+else:
+    cent_file = "centrality/wt.txt"
+    w = ""
 #cent_file = "unfiltered/wt_unfilterd.txt"
 sasa_file = "sasa.txt"
 psn_file = "hc_graph_filtered.dat"
@@ -131,7 +137,7 @@ cf_cols = [c for c in data.columns if "CF_" in c]
 cf_cols = sorted(cf_cols, key = lambda c : c.split('_')[2:])
 
 #plot toggles
-plot = False
+plot = True
 CENT_B = plot
 CENT_CF = plot
 CORR = plot
@@ -214,8 +220,8 @@ def build_graph(fname, pdb = None):
     return identifiers, G
 
 # save pos
-def save_pos(pos):
-    with open('pos.bin', 'wb') as f:
+def save_pos(pos, name = f"pos{w}.bin"):
+    with open(name, 'wb') as f:
         pickle.dump(pos, f)
 
 # load pos
@@ -260,7 +266,7 @@ def plot_graph(G, pos, df, measure, out_dir):
     plt.axis('off')
     #plt.tight_layout()
     plt.title(f"{measure} centrality")
-    plt.savefig(f'{out_dir}{measure}_graph.pdf')
+    plt.savefig(f'{out_dir}{measure}_graph{w}.pdf')
     plt.clf()
 
 G, pos = get_graph_pos(psn_file, pdb_file)
