@@ -8,6 +8,7 @@ import argparse
 import pickle
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from collections import Counter
+from pyinteraph import path_analysis as pa
 
 WT_DICT = {"Degree": 0.030864,
               "Betweenness": 0.144122,
@@ -185,40 +186,6 @@ if CORR:
     sasa_cols = basic_cols + cf_cols + ['SASA']
     heatmap(data, sasa_cols, "sasa", out_dir)
 
-
-def build_graph(fname, pdb = None):
-    """Build a graph from the provided matrix"""
-
-    try:
-        adj_matrix = np.loadtxt(fname)
-    except:
-        errstr = f"Could not load file {fname} or wrong file format."
-        raise ValueError(errstr)
-    # if the user provided a reference structure
-    if pdb is not None:
-        try:
-            # generate a Universe object from the PDB file
-            u = mda.Universe(pdb)
-        except FileNotFoundError:
-            raise FileNotFoundError(f"PDB not found: {pdb}")
-        except:
-            raise Exception(f"Could not parse pdb file: {pdb}")
-        # generate identifiers for the nodes of the graph
-        identifiers = [f"{r.segment.segid}{r.resnum}" for r in u.residues]
-    # if the user did not provide a reference structure
-    else:
-        # generate automatic identifiers going from 1 to the
-        # total number of residues considered
-        identifiers = [f"_{i}" for i in range(1, adj_matrix.shape[0]+1)]
-    
-    # generate a graph from the data loaded
-    G = nx.Graph(adj_matrix)
-    # set the names of the graph nodes (in place)
-    node_names = dict(zip(range(adj_matrix.shape[0]), identifiers))
-    nx.relabel_nodes(G, mapping = node_names, copy = False)
-    # return the idenfiers and the graph
-    return identifiers, G
-
 # save pos
 def save_pos(pos, name = f"pos{w}.bin"):
     with open(name, 'wb') as f:
@@ -232,7 +199,7 @@ def load_pos(file):
 
 
 def get_graph_pos(psn, pdb):
-    nodes, G = build_graph(psn, pdb)
+    nodes, names, G = pa.build_graph(psn, pdb)
     weighted_edges = [(u, v, d["weight"]) for u, v, d in G.edges(data=True)]
     # H = nx.Graph()
     # H.add_weighted_edges_from(weighted_edges)
