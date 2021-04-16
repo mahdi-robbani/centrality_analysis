@@ -130,6 +130,7 @@ pdb_file = "model0_A.pdb"
 out_dir = "plots/"
 #out_dir = "unfiltered/"
 
+
 # load and fix df
 data = combine_cent_sasa(cent_file, sasa_file)
 # get colnames
@@ -164,6 +165,7 @@ if CENT_B:
     # plot custom plots (defined by range dict)
     wt_nodes = plot_centrality_vs_residues(data, basic_cols, sds, "basic", out_dir, share_y = False, max_range = "range_dict")
     print(get_count(wt_nodes))
+    plot_centrality_vs_residues(data, basic_cols, sds, "basic_f", out_dir, share_y = False)
     # Plot absolute plots (max range [0-1])
     plot_centrality_vs_residues(data, basic_cols, sds, "basic_m", out_dir, share_y = False, max_range = "max")
 
@@ -209,7 +211,9 @@ def get_graph_pos(psn, pdb):
     save_pos(pos)
     return H, pos
 
-def plot_graph(G, pos, df, measure, out_dir):
+def plot_graph(G, pos, df, measure, out_dir, r_dict = True):
+    vmax = WT_DICT[measure] if r_dict else None
+    r = "" if r_dict else "_f"
     isolates = list(nx.isolates(G))
     connected = [node for node in G.nodes() if node not in isolates]
     isolates_lab = {node:node[1:] for node in isolates}
@@ -224,8 +228,8 @@ def plot_graph(G, pos, df, measure, out_dir):
     ec = nx.draw_networkx_edges(G, pos)
     colors = ["blue", "purple", "red"]
     RdPuBu = LinearSegmentedColormap.from_list("RdPuBu", colors)
-    nx.draw_networkx_nodes(G, pos, node_size = 250, nodelist = isolates, node_color = 'white', edgecolors='black', vmax = WT_DICT[measure])
-    nc = nx.draw_networkx_nodes(G, pos, node_size = 450, nodelist = connected, node_color = c_weight, cmap = RdPuBu, edgecolors='black', vmax = WT_DICT[measure])
+    nx.draw_networkx_nodes(G, pos, node_size = 250, nodelist = isolates, node_color = 'white', edgecolors='black', vmax = vmax)
+    nc = nx.draw_networkx_nodes(G, pos, node_size = 450, nodelist = connected, node_color = c_weight, cmap = RdPuBu, edgecolors='black', vmax = vmax)
     plt.colorbar(nc)
     nx.draw_networkx_labels(G, pos, labels = isolates_lab, font_size=9, font_color = 'black')
     nx.draw_networkx_labels(G, pos, labels = connected_lab, font_size=9, font_color = 'white')
@@ -233,14 +237,14 @@ def plot_graph(G, pos, df, measure, out_dir):
     plt.axis('off')
     #plt.tight_layout()
     plt.title(f"{measure} centrality")
-    plt.savefig(f'{out_dir}{measure}_graph{w}.pdf')
+    plt.savefig(f'{out_dir}{measure}_graph{r}{w}.pdf')
     plt.clf()
 
 G, pos = get_graph_pos(psn_file, pdb_file)
 if NETWORK:
     for measure in basic_cols:
         print(f"Plotting network: {measure}")
-        plot_graph(G, pos, data, measure, out_dir)
+        plot_graph(G, pos, data, measure, out_dir, r_dict = False)
         # if measure == "Betweenness":
         #     break
 
