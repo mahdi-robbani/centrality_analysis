@@ -61,11 +61,21 @@ def load_sasa(file):
     data['Node'] = data['ID'].apply(lambda x: 'A' + str(x))
     return data
 
-def combine_cent_sasa(cent_file, sasa_file):
+def load_ddg(file):
+    data = pd.read_csv(file, sep = "\t")
+    data['Node'] = data['Node'].apply(lambda x: 'A' + str(x))
+    data.columns = ["Node", "Res", "DDG"]
+    data = data[["Node", "DDG"]]
+    return data
+
+def combine_cent_sasa(cent_file, sasa_file, ddg_file):
     cent = load_centrality(cent_file)
     sasa = load_sasa(sasa_file)
+    ddg = load_ddg(ddg_file)
     sasa = sasa.drop(columns = ['Name'])
     data = cent.merge(sasa, on = 'Node')
+    data = data.merge(ddg, on = 'Node')
+    print(data)
     return data
 
 # plotting functions
@@ -115,7 +125,7 @@ def heatmap(data, colnames, fname, oudir):
 
 
 # set directory and files
-w = True
+w = False
 if w:
     cent_file = "centrality/wt_w.txt"
     w = "_w"
@@ -124,6 +134,7 @@ else:
     w = ""
 #cent_file = "unfiltered/wt_unfilterd.txt"
 sasa_file = "sasa.txt"
+ddg_file = "../../mutatex/mut_data/mean_per_pos_df.txt"
 psn_file = "hc_graph_filtered.dat"
 #psn_file = "hc_graph.dat"
 pdb_file = "model0_A.pdb"
@@ -132,18 +143,18 @@ out_dir = "plots/"
 
 
 # load and fix df
-data = combine_cent_sasa(cent_file, sasa_file)
+data = combine_cent_sasa(cent_file, sasa_file, ddg_file)
 # get colnames
 basic_cols = ['Degree', 'Betweenness', 'Closeness', 'Eigenvector']
 cf_cols = [c for c in data.columns if "CF_" in c]
 cf_cols = sorted(cf_cols, key = lambda c : c.split('_')[2:])
 
 #plot toggles
-plot = True
+plot = False
 CENT_B = plot
 CENT_CF = plot
-CORR = plot
-NETWORK = True
+CORR = True
+NETWORK = plot
 
 
 def get_count(node_dict):
@@ -185,8 +196,8 @@ if CENT_CF:
 if CORR:
     #plot heatmap
     print("plotting heatmap for all cenralities")
-    sasa_cols = basic_cols + cf_cols + ['SASA']
-    heatmap(data, sasa_cols, "sasa", out_dir)
+    sasa_cols = basic_cols + cf_cols + ['SASA', 'DDG']
+    heatmap(data, sasa_cols, "ddg", out_dir)
 
 # save pos
 def save_pos(pos, name = f"pos{w}.bin"):
