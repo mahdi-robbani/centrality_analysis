@@ -82,16 +82,17 @@ class EdgeSwapGraph(networkx.Graph):
         """
         newgraph = self.copy()
         edge_list = list(newgraph.edges())
+        node_list = list(newgraph.nodes())
         num_edges = len(edge_list)
+        num_nodes = len(node_list)
         total_iterations = num_edges * num_iterations
 
         for i in range(total_iterations):
-            rand_index1 = int(round(random.random() * (num_edges - 1)))
-            rand_index2 = int(round(random.random() * (num_edges - 1)))
-            original_edge1 = edge_list[rand_index1]
-            original_edge2 = edge_list[rand_index2]
-            head1, tail1 = original_edge1
-            head2, tail2 = original_edge2
+            rand_e_idx = int(round(random.random() * (num_edges - 1)))
+            rand_n_idx = int(round(random.random() * (num_nodes - 1)))
+            original_edge = edge_list[rand_e_idx]
+            head1, tail1 = original_edge
+            original_node = node_list[rand_n_idx]
 
             # Flip a coin to see if we should swap head1 and tail1 for
             # the connections
@@ -114,7 +115,7 @@ class EdgeSwapGraph(networkx.Graph):
             # We would have new edges (a, c) and (b, b) if we didn't do
             # this check.
 
-            if head1 == tail2 or head2 == tail1:
+            if head1 == original_node:
                 continue
 
             # Trying to avoid multiple edges between same pair of nodes;
@@ -136,23 +137,18 @@ class EdgeSwapGraph(networkx.Graph):
             #
             # These edges already exist.
 
-            if newgraph.has_edge(head1, tail2) or newgraph.has_edge(
-                    head2, tail1):
+            if newgraph.has_edge(head1, original_node):
                 continue
 
             # Suceeded checks, perform the swap
-            original_edge1_data = newgraph[head1][tail1]
-            original_edge2_data = newgraph[head2][tail2]
+            original_edge_data = newgraph[head1][tail1]
 
-            newgraph.remove_edges_from((original_edge1, original_edge2))
-
-            new_edge1 = (head1, tail2, original_edge1_data)
-            new_edge2 = (head2, tail1, original_edge2_data)
-            newgraph.add_edges_from((new_edge1, new_edge2))
+            newgraph.remove_edges_from((original_edge,))
+            new_edge = (head1, original_node, original_edge_data)
+            newgraph.add_edges_from((new_edge,))
 
             # Now update the entries at the indices randomly selected
-            edge_list[rand_index1] = (head1, tail2)
-            edge_list[rand_index2] = (head2, tail1)
+            edge_list[rand_e_idx] = (head1, original_node)
 
         assert len(newgraph.edges()) == num_edges
         return newgraph
