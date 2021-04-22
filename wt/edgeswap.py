@@ -81,11 +81,11 @@ class EdgeSwapGraph(networkx.Graph):
 
         """
         newgraph = self.copy()
-        edge_list = newgraph.edges()
+        edge_list = list(newgraph.edges())
         num_edges = len(edge_list)
         total_iterations = num_edges * num_iterations
 
-        for i in xrange(total_iterations):
+        for i in range(total_iterations):
             rand_index1 = int(round(random.random() * (num_edges - 1)))
             rand_index2 = int(round(random.random() * (num_edges - 1)))
             original_edge1 = edge_list[rand_index1]
