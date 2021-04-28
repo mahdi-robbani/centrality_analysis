@@ -2,6 +2,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+def load_data(filename):
+    data = pd.read_csv(filename, sep = "\t")
+    nrow, ncol = data.shape
+    order = list("GAVLIMFWPSTCYNQDEKRHsyp")
+    idx_dict = dict(zip(range(nrow), order))
+    data = data.rename(index = idx_dict)
+    ind_list = list("GAVLIMFWPSTCYNQDEKRH")
+    data = data.loc[ind_list]
+    return data
+
 def heatmap(data, fname):
     plt.figure(figsize=(10,8))
     sns.heatmap(data, cmap="viridis")
@@ -32,14 +42,9 @@ def series_to_df(series, colname):
     df = df[["Node","Res", colname]]
     return df
 
-data = pd.read_csv("mut_data/mean_df.txt", sep = "\t")
-nrow, ncol = data.shape
-order = list("GAVLIMFWPSTCYNQDEKRHsyp")
-idx_dict = dict(zip(range(nrow), order))
-data = data.rename(index = idx_dict)
-ind_list = list("GAVLIMFWPSTCYNQDEKRH")
-data = data.loc[ind_list]
-
+# load data
+data = load_data("mut_data/mean_df.txt")
+print(data)
 
 # get mean_mean df
 mean_series = data.mean(axis = 0).sort_values(ascending = False)
