@@ -23,26 +23,6 @@ def split_heatmap(data, num_splits, ext):
         if end > ncol:
             end = ncol
 
-def get_mean_df(data):
-    mean_df = data.mean(axis = 0).sort_values(ascending = False)
-    mean_df = mean_df.to_frame()
-    mean_df.columns = ["Mean DDG"]
-    mean_df['Res'] = mean_df.index
-    mean_df['Node'] = [int(r[1:]) for r in mean_df['Res']]
-    mean_df = mean_df.sort_values(by = "Node")
-    mean_df = mean_df[["Node","Res", "Mean DDG"]]
-    return mean_df
-    
-def get_median_df(data):
-    median_df = data.median(axis = 0).sort_values(ascending = False)
-    median_df = median_df.to_frame()
-    median_df.columns = ["Median DDG"]
-    median_df['Res'] = median_df.index
-    median_df['Node'] = [int(r[1:]) for r in median_df['Res']]
-    median_df = median_df.sort_values(by = "Node")
-    median_df = median_df[["Node","Res", "Median DDG"]]
-    return median_df
-
 def series_to_df(series, colname):
     df = series.to_frame()
     df.columns = [colname]
@@ -73,9 +53,10 @@ median_df.to_csv("mut_data/median_per_pos_df.txt", sep = "\t", index = False)
 
 # get count df
 dgg_cutoff = 3
+count_name = f"Count_{dgg_cutoff}"
 count_series = (data > dgg_cutoff).sum(axis = 0).sort_values(ascending = False)
-count_df = series_to_df(count_series, "Count_3")
-print(count_df)
+count_df = series_to_df(count_series, count_name)
+count_df.to_csv(f"{count_name}_df.txt", sep = "\t", index = False)
 
 #PLOT
 # 5 splits = 32.6
