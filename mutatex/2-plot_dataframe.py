@@ -56,7 +56,7 @@ dgg_cutoff = 3
 count_name = f"Count_{dgg_cutoff}"
 count_series = (data > dgg_cutoff).sum(axis = 0).sort_values(ascending = False)
 count_df = series_to_df(count_series, count_name)
-count_df.to_csv(f"{count_name}_df.txt", sep = "\t", index = False)
+count_df.to_csv(f"mut_data/{count_name}_df.txt", sep = "\t", index = False)
 
 #PLOT
 # 5 splits = 32.6
