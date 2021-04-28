@@ -64,18 +64,18 @@ def load_sasa(file):
 def load_ddg(file):
     data = pd.read_csv(file, sep = "\t")
     data['Node'] = data['Node'].apply(lambda x: 'A' + str(x))
-    data.columns = ["Node", "Res", "DDG"]
-    data = data[["Node", "DDG"]]
+    data = data.drop(["Res"], axis = 1)
     return data
 
-def combine_cent_sasa(cent_file, sasa_file, ddg_file):
+def combine_cent_sasa(cent_file, sasa_file, ddg_file1, ddg_file2):
     cent = load_centrality(cent_file)
     sasa = load_sasa(sasa_file)
-    ddg = load_ddg(ddg_file)
+    mean_ddg = load_ddg(ddg_file1)
+    median_ddg = load_ddg(ddg_file2)
     sasa = sasa.drop(columns = ['Name'])
     data = cent.merge(sasa, on = 'Node')
-    data = data.merge(ddg, on = 'Node')
-    print(data)
+    data = data.merge(mean_ddg, on = 'Node')
+    data = data.merge(median_ddg, on = 'Node')
     return data
 
 # plotting functions
@@ -132,9 +132,11 @@ if w:
 else:
     cent_file = "centrality/wt.txt"
     w = ""
+#w = "_corr_pos"
 #cent_file = "unfiltered/wt_unfilterd.txt"
 sasa_file = "sasa.txt"
-ddg_file = "../../mutatex/mut_data/mean_per_pos_df.txt"
+ddg_file1 = "../../mutatex/mut_data/mean_per_pos_df.txt"
+ddg_file2 = "../../mutatex/mut_data/median_per_pos_df.txt"
 psn_file = "hc_graph_filtered.dat"
 #psn_file = "hc_graph.dat"
 pdb_file = "model0_A.pdb"
@@ -143,7 +145,7 @@ out_dir = "plots/"
 
 
 # load and fix df
-data = combine_cent_sasa(cent_file, sasa_file, ddg_file)
+data = combine_cent_sasa(cent_file, sasa_file, ddg_file1, ddg_file2)
 # get colnames
 basic_cols = ['Degree', 'Betweenness', 'Closeness', 'Eigenvector']
 cf_cols = [c for c in data.columns if "CF_" in c]
@@ -153,8 +155,8 @@ cf_cols = sorted(cf_cols, key = lambda c : c.split('_')[2:])
 plot = False
 CENT_B = plot
 CENT_CF = plot
-CORR = True
-NETWORK = plot
+CORR = plot
+NETWORK = True
 
 
 def get_count(node_dict):
@@ -196,7 +198,7 @@ if CENT_CF:
 if CORR:
     #plot heatmap
     print("plotting heatmap for all cenralities")
-    sasa_cols = basic_cols + cf_cols + ['SASA', 'DDG']
+    sasa_cols = basic_cols + cf_cols + ['SASA', 'Mean DDG', 'Median DDG']
     heatmap(data, sasa_cols, "ddg", out_dir)
 
 # save pos
@@ -220,6 +222,8 @@ def get_graph_pos(psn, pdb):
     # k = 0.5, iterations = 100
     pos = nx.spring_layout(H, k = 0.55, seed = 1, iterations = 100)
     save_pos(pos)
+    #pos = load_pos("../ccmpsn/pos.bin") #CHANGE
+    #print(pos)
     return H, pos
 
 def plot_graph(G, pos, df, measure, out_dir, r_dict = True):
