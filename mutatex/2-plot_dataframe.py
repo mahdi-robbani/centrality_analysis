@@ -23,6 +23,34 @@ def split_heatmap(data, num_splits, ext):
         if end > ncol:
             end = ncol
 
+def get_mean_df(data):
+    mean_df = data.mean(axis = 0).sort_values(ascending = False)
+    mean_df = mean_df.to_frame()
+    mean_df.columns = ["Mean DDG"]
+    mean_df['Res'] = mean_df.index
+    mean_df['Node'] = [int(r[1:]) for r in mean_df['Res']]
+    mean_df = mean_df.sort_values(by = "Node")
+    mean_df = mean_df[["Node","Res", "Mean DDG"]]
+    return mean_df
+    
+def get_median_df(data):
+    median_df = data.median(axis = 0).sort_values(ascending = False)
+    median_df = median_df.to_frame()
+    median_df.columns = ["Median DDG"]
+    median_df['Res'] = median_df.index
+    median_df['Node'] = [int(r[1:]) for r in median_df['Res']]
+    median_df = median_df.sort_values(by = "Node")
+    median_df = median_df[["Node","Res", "Median DDG"]]
+    return median_df
+
+def series_to_df(series, colname):
+    df = series.to_frame()
+    df.columns = [colname]
+    df['Res'] = df.index
+    df['Node'] = [int(r[1:]) for r in df['Res']]
+    df = df.sort_values(by = "Node")
+    df = df[["Node","Res", colname]]
+    return df
 
 data = pd.read_csv("mut_data/mean_df.txt", sep = "\t")
 nrow, ncol = data.shape
@@ -32,28 +60,22 @@ data = data.rename(index = idx_dict)
 ind_list = list("GAVLIMFWPSTCYNQDEKRH")
 data = data.loc[ind_list]
 
-# # get mean_mean df
-mean_df = data.mean(axis = 0).sort_values(ascending = False)
-mean_df = mean_df.to_frame()
-mean_df.columns = ["Mean DDG"]
-mean_df['Res'] = mean_df.index
-mean_df['Node'] = [int(r[1:]) for r in mean_df['Res']]
-mean_df = mean_df.sort_values(by = "Node")
-mean_df = mean_df[["Node","Res", "Mean DDG"]]
-print(mean_df)
+
+# get mean_mean df
+mean_series = data.mean(axis = 0).sort_values(ascending = False)
+mean_df = series_to_df(mean_series, "Mean DDG")
 mean_df.to_csv("mut_data/mean_per_pos_df.txt", sep = "\t", index = False)
 
-# # get median_mean df
-median_df = data.median(axis = 0).sort_values(ascending = False)
-median_df = median_df.to_frame()
-median_df.columns = ["Median DDG"]
-median_df['Res'] = median_df.index
-median_df['Node'] = [int(r[1:]) for r in median_df['Res']]
-median_df = median_df.sort_values(by = "Node")
-median_df = median_df[["Node","Res", "Median DDG"]]
-print(median_df)
+# get median_mean df
+median_series = data.median(axis = 0).sort_values(ascending = False)
+median_df = series_to_df(median_series, "Median DDG")
 median_df.to_csv("mut_data/median_per_pos_df.txt", sep = "\t", index = False)
 
+# get count df
+dgg_cutoff = 3
+count_series = (data > dgg_cutoff).sum(axis = 0).sort_values(ascending = False)
+count_df = series_to_df(count_series, "Count_3")
+print(count_df)
 
 #PLOT
 # 5 splits = 32.6
@@ -68,10 +90,10 @@ data[data < cutoff] = 0
 data[data > 0] = 1
 # plot new
 
-split_heatmap(data, 5, f"bool_{cutoff}")
+#split_heatmap(data, 5, f"bool_{cutoff}")
 
 sum_df = data.sum(axis = 0).sort_values(ascending = False)
-sum_df.to_csv(f"mut_data/sum_cutoff_df.txt", sep = "\t", index = True)
+#sum_df.to_csv(f"mut_data/sum_cutoff_df.txt", sep = "\t", index = True)
 
 
 
