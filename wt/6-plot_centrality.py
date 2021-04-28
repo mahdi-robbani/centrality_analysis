@@ -67,14 +67,17 @@ def load_ddg(file):
     data = data.drop(["Res"], axis = 1)
     return data
 
-def combine_cent_sasa(cent_file, sasa_file, ddg_dict):
+def combine_cent_sasa(cent_file, sasa_file, ddg_file):
     cent = load_centrality(cent_file)
     sasa = load_sasa(sasa_file)
     sasa = sasa.drop(columns = ['Name'])
     data = cent.merge(sasa, on = 'Node')
-    for col, file_path in ddg_dict.items():
-        ddg_df = load_ddg(file_path)
-        data = data.merge(ddg_df, on = 'Node')
+    ddg = load_ddg(ddg_file)
+    data = data.merge(ddg, on = 'Node')
+    # for col, file_path in ddg_dict.items():
+    #     ddg_df = load_ddg(file_path)
+    #     data = data.merge(ddg_df, on = 'Node')
+
     return data
 
 # plotting functions
@@ -137,6 +140,7 @@ sasa_file = "sasa.txt"
 ddg_dict = {"mean" : "../mutatex/mut_data/mean_per_pos_df.txt",
             "median" : "../mutatex/mut_data/median_per_pos_df.txt",
             "count_3" : "../mutatex/mut_data/Count_3_df.txt"}
+ddg_file = "../mutatex/mut_data/per_pos_df.txt"
 psn_file = "hc_graph_filtered.dat"
 #psn_file = "hc_graph.dat"
 pdb_file = "model0_A.pdb"
@@ -145,7 +149,7 @@ out_dir = "plots/"
 
 
 # load and fix df
-data = combine_cent_sasa(cent_file, sasa_file, ddg_dict)
+data = combine_cent_sasa(cent_file, sasa_file, ddg_file)
 # get colnames
 basic_cols = ['Degree', 'Betweenness', 'Closeness', 'Eigenvector']
 cf_cols = [c for c in data.columns if "CF_" in c]
@@ -197,12 +201,15 @@ if CENT_CF:
 # plot heatmap
 if CORR:
     #plot heatmap
-    print("plotting heatmap for all cenralities")
-    cent_cols = basic_cols + cf_cols
-    heatmap(data, cent_cols, "", out_dir)
-    print("plotting heatmap for all sasa cenralities")
-    sasa_cols = basic_cols + ['SASA', 'Mean DDG', 'Median DDG', 'Count_3']
-    heatmap(data, sasa_cols, "ddg", out_dir)
+    # print("plotting heatmap for all cenralities")
+    # cent_cols = basic_cols + cf_cols
+    # heatmap(data, cent_cols, "", out_dir)
+    # print("plotting heatmap for all sasa cenralities")
+    # sasa_cols = basic_cols + ['SASA', 'Mean DDG', 'Median DDG', 'Count_3']
+    # heatmap(data, sasa_cols, "ddg", out_dir)
+    print("plotting heatmap for all count cenralities")
+    sasa_cols = basic_cols + ['SASA', 'Mean DDG', 'Median DDG'] + [f"Count_{i}" for i in range(0, 12)]
+    heatmap(data, sasa_cols, "ddg_count", out_dir)
 
 # save pos
 def save_pos(pos, name = f"pos{w}.bin"):
