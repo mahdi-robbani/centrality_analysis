@@ -9,22 +9,44 @@ import pickle
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from collections import Counter
 
-WT_DICT = {"Degree": 0.030864,
-              "Betweenness": 0.144122,
-              "Closeness": 0.067009,
-              "Eigenvector": 0.519175}
+# WT_DICT = {"Degree": 0.030864,
+#               "Betweenness": 0.144122,
+#               "Closeness": 0.067009,
+#               "Eigenvector": 0.519175}
 
-RANGE_DICT = {"Degree": 0.035,
-              "Betweenness": 0.15,
-              "Closeness": 0.10,
-              "Eigenvector": 0.55,
-              "CF_betweenness_1" : 0.75,
-              "CF_betweenness_2" : 0.75,
-              "CF_betweenness_3" : 0.75,
-              "CF_closeness_1" : 0.135,
-              "CF_closeness_2" : 0.135,
-              "CF_closeness_3" : 0.135,
+# RANGE_DICT = {"Degree": 0.035,
+#               "Betweenness": 0.15,
+#               "Closeness": 0.10,
+#               "Eigenvector": 0.55,
+#               "CF_betweenness_1" : 0.75,
+#               "CF_betweenness_2" : 0.75,
+#               "CF_betweenness_3" : 0.75,
+#               "CF_closeness_1" : 0.135,
+#               "CF_closeness_2" : 0.135,
+#               "CF_closeness_3" : 0.135,
+#               }
+
+
+# unfiltred range dict for sd plot
+SD_DICT = {"Degree": 0.06,
+              "Betweenness": 0.35,
+              "Closeness": 0.35,
+              "Eigenvector": 0.60,
+}
+
+# unfiltered range dict for network plots
+NETWORK_DICT = {"Degree": 0.05,
+              "Betweenness": 0.35,
+              "Closeness": 0.21,
+              "Eigenvector": 0.60,
+              #"CF_betweenness_1" : 0.75,
+              #"CF_betweenness_2" : 0.75,
+              #"CF_betweenness_3" : 0.75,
+              #"CF_closeness_1" : 0.135,
+              #"CF_closeness_2" : 0.135,
+              #"CF_closeness_3" : 0.135,
               }
+
 
 RES_DICT = {
     'ALA':  'A','ARG':	'R','ASN':	'N','ASP':	'D',
@@ -81,7 +103,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max
                 if max_range == "max":
                     ax.set_ylim(top = 1)
                 elif max_range == "range_dict":
-                    ax.set_ylim(top = RANGE_DICT[columns[i]])
+                    ax.set_ylim(top = SD_DICT[columns[i]])
                 mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
                 cutoff = mean_std[0] + sd*mean_std[1]
                 node_list = []
@@ -100,7 +122,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max
             else:
                 ax.set_visible(False)
         fig.tight_layout()
-        plt.savefig(f"{out_dir}/centrality_{sd}_{fname}.pdf")
+        plt.savefig(f"{out_dir}/centrality_{sd}_{fname}_{w}.pdf")
         plt.clf()
     return node_dict
 
@@ -114,11 +136,18 @@ def heatmap(data, colnames, fname, oudir):
 
 
 # set directory and files
-cent_file = "unfiltered/wt_unfilterd.txt"
+w = True
+if w:
+    cent_file = "unfiltered/wt_unf_weight.txt"
+    w = "w"
+else:
+    cent_file = "unfiltered/wt_unf.txt"
+    w = ""
+
 sasa_file = "sasa.txt"
 psn_file = "hc_graph.dat"
 pdb_file = "model0_A.pdb"
-out_dir = "unfiltered/"
+out_dir = "unfiltered_new/"
 
 # load and fix df
 data = combine_cent_sasa(cent_file, sasa_file)
@@ -129,10 +158,12 @@ cf_cols = sorted(cf_cols, key = lambda c : c.split('_')[2:])
 
 #plot toggles
 plot = False
-CENT_B = plot
+CENT_B = True
 CENT_CF = plot
 CORR = plot
 NETWORK = True
+
+
 
 
 def get_count(node_dict):
@@ -211,8 +242,8 @@ def build_graph(fname, pdb = None):
     return identifiers, G
 
 # save pos
-def save_pos(pos):
-    with open('pos.bin', 'wb') as f:
+def save_pos(pos, name = "pos.bin"):
+    with open(name, 'wb') as f:
         pickle.dump(pos, f)
 
 # load pos
@@ -229,9 +260,9 @@ def get_graph_pos(psn, pdb):
     # H.add_weighted_edges_from(weighted_edges)
     H = G
     # k = 0.5, iterations = 100
-    #pos = nx.spring_layout(H, k = 0.55, seed = 1, iterations = 100)
-    #save_pos(pos)
-    pos = load_pos("pos.bin")
+    pos = nx.spring_layout(H, k = 0.9, seed = 2, iterations = 100)
+    save_pos(pos, "unf2.bin")
+    #pos = load_pos("pos.bin")
     return H, pos
 
 def plot_graph(G, pos, df, measure, out_dir):
@@ -249,8 +280,8 @@ def plot_graph(G, pos, df, measure, out_dir):
     ec = nx.draw_networkx_edges(G, pos)
     colors = ["blue", "purple", "red"]
     RdPuBu = LinearSegmentedColormap.from_list("RdPuBu", colors)
-    nx.draw_networkx_nodes(G, pos, node_size = 250, nodelist = isolates, node_color = 'white', edgecolors='black', vmax = WT_DICT[measure])
-    nc = nx.draw_networkx_nodes(G, pos, node_size = 450, nodelist = connected, node_color = c_weight, cmap = RdPuBu, edgecolors='black', vmax = WT_DICT[measure])
+    nx.draw_networkx_nodes(G, pos, node_size = 250, nodelist = isolates, node_color = 'white', edgecolors='black', vmax = NETWORK_DICT[measure])
+    nc = nx.draw_networkx_nodes(G, pos, node_size = 450, nodelist = connected, node_color = c_weight, cmap = RdPuBu, edgecolors='black', vmax = NETWORK_DICT[measure])
     plt.colorbar(nc)
     nx.draw_networkx_labels(G, pos, labels = isolates_lab, font_size=9, font_color = 'black')
     nx.draw_networkx_labels(G, pos, labels = connected_lab, font_size=9, font_color = 'white')
@@ -258,7 +289,7 @@ def plot_graph(G, pos, df, measure, out_dir):
     plt.axis('off')
     #plt.tight_layout()
     plt.title(f"{measure} centrality")
-    plt.savefig(f'{out_dir}{measure}_graph.pdf')
+    plt.savefig(f'{out_dir}{measure}_graph_{w}_pos2.pdf')
     plt.clf()
 
 G, pos = get_graph_pos(psn_file, pdb_file)
