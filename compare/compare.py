@@ -16,14 +16,15 @@ RES_DICT = {
     }
 
 wt = "../wt/centrality/wt.txt"
-mt = "../s99t/centrality/s99t.txt"
+w = True
+if not w:
+    mt = "../s99t/centrality/s99t.txt"
+    w = ""
+else:
+    mt = "../wt/centrality/wt_w.txt"
+    w = "_w"
 pdb = "../wt/model0_A.pdb"
 
-# def get_df_basic(fname):
-#     df = pd.read_csv(fname, sep ="\t")
-#     colnames = ["degree", "betweenness", "closeness", "eigenvector"]
-#     df = df[colnames]
-#     return df
 
 def get_res_column(data):
     return [RES_DICT[data['name'][i]] + n[1:] for i, n in enumerate(data['node'])]
@@ -53,12 +54,16 @@ def get_diff_df(wt_df, mt_df, scale, abs = False):
     diff = diff.abs() if abs else diff
     return diff
 
+def get_diff_rank_df(wt_df, mt_df)
+
 #node = pd.read_csv(wt, sep = "\t")['node']
 wt_df = load_centrality(wt)
 mt_df = load_centrality(mt)
 
-diff_df = get_diff_df(wt_df, mt_df, scale = False, abs = False)
-diff_df['Residue'] = wt_df['Residue']
+print(wt_df)
+
+#diff_df = get_diff_df(wt_df, mt_df, scale = False, abs = False)
+#diff_df['Residue'] = wt_df['Residue']
 
 def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
     node_dict = {}
@@ -94,7 +99,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
             else:
                 ax.set_visible(False)
         fig.tight_layout()
-        plt.savefig(f"{fname}.pdf")
+        plt.savefig(f"{fname}{w}.pdf")
         plt.clf()
     return node_dict
 
@@ -109,8 +114,8 @@ def get_count(node_dict):
     return node_list
 
 # Plot
-diff_nodes = plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
-print(get_count(diff_nodes))
+#diff_nodes = plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
+#print(get_count(diff_nodes))
 
 # create pdb
 
@@ -151,40 +156,11 @@ def write_pdb_files(df, pdb, fname):
 
 #write_pdb_files(diff_df, pdb, "pdb/diff")
 
-scaled_diff_df = get_diff_df(wt_df, mt_df, scale = True, abs = False)
-scaled_diff_df['Residue'] = wt_df['Residue']
-# Plot
-scaled_diff_nodes = plot_centrality_vs_residues(scaled_diff_df, list(scaled_diff_df.columns)[:-1], [3], "scaled_diff")
-print(get_count(scaled_diff_nodes))
-
-# old code
-#write_pdb_files(scaled_diff_df, pdb, "pdb/scaled_diff")
-
-
-# ratio_df = wt_df / mt_df
-# ratio_df['node'] = node
-# ratio_df_nodes = plot_centrality_vs_residues(ratio_df, list(ratio_df.columns)[:-1], [3], "ratio")
-# print(get_count(ratio_df_nodes))
-
-
-wt = ['T32', 'N102', 'N108', 'H126', 'H92', 'S99', 'T119', 'L122', 'V128']
-mut = ['F22', 'T32', 'L98', 'N102', 'F129', 'V132', 'M136', 'V139', 'M142', 'H92', 'T99', 'T119', 'L122', 'V128']
-u_diff = ['A82', 'A102', 'A111', 'A100', 'A108', 'A84', 'A125', 'A32', 'A85', 'A86', 'A113', 'A127']
-s_diff = ['A82', 'A102', 'A111', 'A99', 'A100', 'A108', 'A113', 'A127', 'A66', 'A84', 'A125', 'A32', 'A85', 'A86']
-
-all_nodes = wt + mut + s_diff
-all_nodes = [n[1:] for n in all_nodes]
-print(Counter(all_nodes))
-#print(Counter(s_diff))
-
-# all_nodes = [wt, mut, u_diff, s_diff] 
-# for lst in all_nodes:
-#     lst = sorted([n[1:] for n in lst])
-#     print(lst)
-
-print(wt_df)
-plt.plot(wt_df['CF_closeness_1'])
-plt.savefig("tst.png")
+# scaled_diff_df = get_diff_df(wt_df, mt_df, scale = True, abs = False)
+# scaled_diff_df['Residue'] = wt_df['Residue']
+# # Plot
+# scaled_diff_nodes = plot_centrality_vs_residues(scaled_diff_df, list(scaled_diff_df.columns)[:-1], [3], "scaled_diff")
+# print(get_count(scaled_diff_nodes))
 
 
 
