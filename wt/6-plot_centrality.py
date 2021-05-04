@@ -201,12 +201,12 @@ if CENT_CF:
 # plot heatmap
 if CORR:
     #plot heatmap
-    # print("plotting heatmap for all cenralities")
-    # cent_cols = basic_cols + cf_cols
-    # heatmap(data, cent_cols, "", out_dir)
-    # print("plotting heatmap for all sasa cenralities")
-    # sasa_cols = basic_cols + ['SASA', 'Mean DDG', 'Median DDG', 'Count_3']
-    # heatmap(data, sasa_cols, "ddg", out_dir)
+    print("plotting heatmap for all cenralities")
+    cent_cols = basic_cols + cf_cols
+    heatmap(data, cent_cols, "", out_dir)
+    print("plotting heatmap for all sasa cenralities")
+    sasa_cols = basic_cols + ['SASA', 'Mean DDG', 'Median DDG', 'Count_3']
+    heatmap(data, sasa_cols, "ddg", out_dir)
     print("plotting heatmap for all count cenralities")
     sasa_cols = basic_cols + ['SASA', 'Mean DDG', 'Median DDG'] + [f"Count_{i}" for i in range(0, 12)]
     heatmap(data, sasa_cols, "ddg_count", out_dir)
@@ -236,7 +236,7 @@ def get_graph_pos(psn, pdb):
     #print(pos)
     return H, pos
 
-def plot_graph(G, pos, df, measure, out_dir, r_dict = True):
+def plot_graph(G, pos, df, measure, out_dir, ext, r_dict = True):
     vmax = WT_DICT[measure] if r_dict else None
     r = "" if r_dict else "_f"
     isolates = list(nx.isolates(G))
@@ -262,14 +262,14 @@ def plot_graph(G, pos, df, measure, out_dir, r_dict = True):
     plt.axis('off')
     #plt.tight_layout()
     plt.title(f"{measure} centrality")
-    plt.savefig(f'{out_dir}{measure}_graph{r}{w}.pdf')
+    plt.savefig(f'{out_dir}{measure}_graph{r}_{ext}.pdf')
     plt.clf()
 
 G, pos = get_graph_pos(psn_file, pdb_file)
 if NETWORK:
     for measure in basic_cols:
         print(f"Plotting network: {measure}")
-        plot_graph(G, pos, data, measure, out_dir, r_dict = False)
+        plot_graph(G, pos, data, measure, out_dir, "", r_dict = False)
         # if measure == "Betweenness":
         #     break
 
