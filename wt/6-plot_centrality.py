@@ -118,6 +118,8 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max
     return node_dict
 
 def heatmap(data, colnames, fname, oudir):
+    #ignore glycines
+    data = data.loc[data['Name'] != "GLY"]
     cor = data[colnames].corr().round(2)
     plt.figure(figsize=(10,8))
     sns.heatmap(cor, cmap="RdBu_r", annot = True)
@@ -127,15 +129,8 @@ def heatmap(data, colnames, fname, oudir):
 
 
 # set directory and files
-w = False
-if w:
-    cent_file = "centrality/wt_w.txt"
-    w = "_w"
-else:
-    cent_file = "centrality/wt.txt"
-    w = ""
-#w = "_corr_pos"
-#cent_file = "unfiltered/wt_unfilterd.txt"
+cent_file = "centrality/wt.txt"
+w = ""
 sasa_file = "sasa.txt"
 ddg_dict = {"mean" : "../mutatex/mut_data/mean_per_pos_df.txt",
             "median" : "../mutatex/mut_data/median_per_pos_df.txt",
@@ -156,11 +151,11 @@ cf_cols = [c for c in data.columns if "CF_" in c]
 cf_cols = sorted(cf_cols, key = lambda c : c.split('_')[2:])
 
 #plot toggles
-plot = False
+plot = True
 CENT_B = plot
 CENT_CF = plot
 CORR = True
-NETWORK = False
+NETWORK = plot
 
 
 def get_count(node_dict):
@@ -191,7 +186,7 @@ if CENT_B:
 if CENT_CF:
     print("plotting centrality vs residues for CF cenralities")
     # Plot relative plots (default range)
-    plot_centrality_vs_residues(data, cf_cols, sds, "cf", out_dir, share_y = False, max_range = "range_dict")
+    plot_centrality_vs_residues(data, cf_cols, sds, "cf", out_dir, share_y = False)
     # Plot absolute plots (max range [0-1])
     plot_centrality_vs_residues(data, cf_cols, sds, "cf_m", out_dir, share_y = False, max_range = "max")
 
@@ -203,13 +198,13 @@ if CORR:
     #plot heatmap
     print("plotting heatmap for all cenralities")
     cent_cols = basic_cols + cf_cols
-    heatmap(data, cent_cols, "", out_dir)
+    heatmap(data, cent_cols, "noG", out_dir)
     print("plotting heatmap for all sasa cenralities")
     sasa_cols = basic_cols + ['SASA', 'Mean DDG', 'Median DDG', 'Count_3']
-    heatmap(data, sasa_cols, "ddg", out_dir)
+    heatmap(data, sasa_cols, "ddg_noG", out_dir)
     print("plotting heatmap for all count cenralities")
     sasa_cols = basic_cols + ['SASA', 'Mean DDG', 'Median DDG'] + [f"Count_{i}" for i in range(0, 12)]
-    heatmap(data, sasa_cols, "ddg_count", out_dir)
+    heatmap(data, sasa_cols, "ddg_count_noG", out_dir)
 
 # save pos
 def save_pos(pos, name = f"pos{w}.bin"):
