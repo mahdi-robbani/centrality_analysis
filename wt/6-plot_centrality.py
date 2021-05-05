@@ -82,10 +82,10 @@ def combine_cent_sasa(cent_file, sasa_file, ddg_file):
 
 # plotting functions
 
-def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max_range = None, size = (9, 7)):
+def plot_centrality_vs_residues(data, columns, top_n, fname, out_dir, share_y, max_range = None, size = (9, 7)):
     node_dict = {}
     nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
-    for sd in sds:
+    for n in top_n:
         fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= share_y)
         for i, ax in enumerate(axs.flat):
             if i < len(columns):
@@ -95,8 +95,11 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max
                     ax.set_ylim(top = 1)
                 elif max_range == "range_dict":
                     ax.set_ylim(top = RANGE_DICT[columns[i]])
-                mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
-                cutoff = mean_std[0] + sd*mean_std[1]
+                # GET CUTOFF
+                #mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
+                #cutoff = mean_std[0] + sd*mean_std[1]
+                cutoff = sorted(data[columns[i]], reverse = True)[n:n+1][0]
+                #print(cutoff)
                 node_list = []
                 for j, val in enumerate(data[columns[i]]):
                     if val > cutoff:
@@ -113,7 +116,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname, out_dir, share_y, max
             else:
                 ax.set_visible(False)
         fig.tight_layout()
-        plt.savefig(f"{out_dir}/centrality_{sd}_{fname}{w}.pdf")
+        plt.savefig(f"{out_dir}/centrality_{n}_{fname}.pdf")
         plt.clf()
     return node_dict
 
@@ -168,8 +171,8 @@ def get_count(node_dict):
     return node_list
 
 # plot centrality vs residues
-
-sds = [3]
+# top n residues
+sds = [3,4,5]
 
 # plot basic
 if CENT_B:
