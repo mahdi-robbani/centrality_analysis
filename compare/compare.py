@@ -5,6 +5,8 @@ import MDAnalysis as mda
 from Bio import PDB
 import argparse
 from collections import Counter
+from pyinteraph import path_analysis as pa
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 RES_DICT = {
     'ALA':  'A','ARG':	'R','ASN':	'N','ASP':	'D',
@@ -16,14 +18,9 @@ RES_DICT = {
     }
 
 wt = "../wt/centrality/wt.txt"
-w = True
-if not w:
-    mt = "../s99t/centrality/s99t.txt"
-    w = ""
-else:
-    mt = "../wt/centrality/wt_w.txt"
-    w = "_w"
+mt = "../s99t/centrality/s99t.txt"
 pdb = "../wt/model0_A.pdb"
+psn = "../wt/hc_graph_filtered.dat"
 
 
 def get_res_column(data):
@@ -54,16 +51,19 @@ def get_diff_df(wt_df, mt_df, scale, abs = False):
     diff = diff.abs() if abs else diff
     return diff
 
-def get_diff_rank_df(wt_df, mt_df)
+def get_diff_rank_df(wt_df, mt_df, abs = False):
+    colnames = ["Degree", "Betweenness", "Closeness", "Eigenvector"]
+    wt_df = wt_df[colnames].rank(method = 'min', ascending = False)
+    mt_df = mt_df[colnames].rank(method = 'min', ascending = False)
+    diff = mt_df - wt_df
+    diff = diff.abs() if abs else diff
+    return diff
 
-#node = pd.read_csv(wt, sep = "\t")['node']
 wt_df = load_centrality(wt)
 mt_df = load_centrality(mt)
 
-print(wt_df)
-
-#diff_df = get_diff_df(wt_df, mt_df, scale = False, abs = False)
-#diff_df['Residue'] = wt_df['Residue']
+diff_df = get_diff_df(wt_df, mt_df, scale = False, abs = False)
+diff_df['Residue'] = wt_df['Residue']
 
 def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
     node_dict = {}
@@ -99,7 +99,7 @@ def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
             else:
                 ax.set_visible(False)
         fig.tight_layout()
-        plt.savefig(f"{fname}{w}.pdf")
+        plt.savefig(f"{fname}.pdf")
         plt.clf()
     return node_dict
 
@@ -161,6 +161,66 @@ def write_pdb_files(df, pdb, fname):
 # # Plot
 # scaled_diff_nodes = plot_centrality_vs_residues(scaled_diff_df, list(scaled_diff_df.columns)[:-1], [3], "scaled_diff")
 # print(get_count(scaled_diff_nodes))
+# save pos
+def save_pos(pos, name = f"pos.bin"):
+    with open(name, 'wb') as f:
+        pickle.dump(pos, f)
 
+# load pos
+def load_pos(file):
+    with open(file, 'rb') as f:
+        data = pickle.load(f)
+    return data
+
+
+def get_graph_pos(psn, pdb):
+    nodes, names, G = pa.build_graph(psn, pdb)
+    weighted_edges = [(u, v, d["weight"]) for u, v, d in G.edges(data=True)]
+    # H = nx.Graph()
+    # H.add_weighted_edges_from(weighted_edges)
+    H = G
+    # k = 0.5, iterations = 100
+    pos = nx.spring_layout(H, k = 0.55, seed = 1, iterations = 100)
+    #save_pos(pos)
+    #pos = load_pos("../ccmpsn/pos.bin") #CHANGE
+    #print(pos)
+    return H, pos
+
+def plot_graph(G, pos, df, measure, out_dir, ext):
+    isolates = list(nx.isolates(G))
+    connected = [node for node in G.nodes() if node not in isolates]
+    isolates_lab = {node:node[1:] for node in isolates}
+    connected_lab = {node:node[1:] for node in connected}
+    active_site = [55,60,102,113,122,126]
+    acitve_lab = {f"A{str(node)}" : str(node) for node in active_site}
+    #lab = {node:COVERT_DICT[node] for node in nodes}
+    #weights = df[measure]
+    #df[measure] = df[measure]
+    c_weight = df[df['Residue'].isin(connected)][measure]
+    fig, ax = plt.subplots(figsize = (14,10))
+    ec = nx.draw_networkx_edges(G, pos)
+    colors = ["blue", "purple", "red"]
+    RdPuBu = LinearSegmentedColormap.from_list("RdPuBu", colors)
+    nx.draw_networkx_nodes(G, pos, node_size = 250, nodelist = isolates, node_color = 'white', edgecolors='black')
+    nc = nx.draw_networkx_nodes(G, pos, node_size = 450, nodelist = connected, node_color = c_weight, cmap = RdPuBu, edgecolors='black')
+    plt.colorbar(nc)
+    nx.draw_networkx_labels(G, pos, labels = isolates_lab, font_size=9, font_color = 'black')
+    nx.draw_networkx_labels(G, pos, labels = connected_lab, font_size=9, font_color = 'white')
+    nx.draw_networkx_labels(G, pos, labels = acitve_lab, font_size=9, font_color = 'cyan')
+    plt.axis('off')
+    #plt.tight_layout()
+    plt.title(f"{measure} centrality")
+    plt.savefig(f'{out_dir}{measure}_graph_{ext}.pdf')
+    plt.clf()
+
+G, pos = get_graph_pos(psn, pdb)
+
+rank_diff_df = get_diff_rank_df(wt_df, mt_df)
+rank_diff_df = rank_diff_df#.abs()#/rank_diff_df.max()
+rank_diff_df['Residue'] = wt_df['Residue'].apply(lambda x: f"A{x[1:]}")
+
+
+for measure in ["Degree", "Betweenness", "Closeness", "Eigenvector"]:
+    plot_graph(G, pos, rank_diff_df, measure, "", "rank_diff")
 
 
