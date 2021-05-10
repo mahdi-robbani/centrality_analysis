@@ -42,26 +42,36 @@ def series_to_df(series, colname):
     df = df[["Node","Res", colname]]
     return df
 
+
+def get_output_df(data):
+    res = data.columns
+    node = [int(r[1:]) for r in list(res)]
+    df = pd.DataFrame(data = node, columns = ["Node"])
+    df["Res"] = res
+    return df
+
 # load data
 data = load_data("mut_data/mean_df.txt")
-print(data)
+df = get_output_df(data)
+df['Mean DDG'] = list(data.mean(axis = 0).to_frame()[0])
+df['Median DDG'] = list(data.median(axis = 0).to_frame()[0])
+dgg_cutoff_list = range(0, 12)
+for dgg_cutoff in dgg_cutoff_list:
+    col_name = f"Mutant Count > {dgg_cutoff}"
+    df[col_name] = list((data > dgg_cutoff).sum(axis = 0).to_frame()[0])
+print(df)
+df.to_csv("mut_data/per_pos_df.txt", sep = "\t", index = False)
 
-# get mean_mean df
-mean_series = data.mean(axis = 0).sort_values(ascending = False)
-mean_df = series_to_df(mean_series, "Mean DDG")
-mean_df.to_csv("mut_data/mean_per_pos_df.txt", sep = "\t", index = False)
-
-# get median_mean df
-median_series = data.median(axis = 0).sort_values(ascending = False)
-median_df = series_to_df(median_series, "Median DDG")
-median_df.to_csv("mut_data/median_per_pos_df.txt", sep = "\t", index = False)
 
 # get count df
-dgg_cutoff = 3
-count_name = f"Count_{dgg_cutoff}"
-count_series = (data > dgg_cutoff).sum(axis = 0).sort_values(ascending = False)
-count_df = series_to_df(count_series, count_name)
-count_df.to_csv(f"mut_data/{count_name}_df.txt", sep = "\t", index = False)
+
+
+# print(list(dgg_cutoff_list))
+# #dgg_cutoff = 3
+# count_name = f"Count_{dgg_cutoff}"
+# count_series = (data > dgg_cutoff).sum(axis = 0).sort_values(ascending = False)
+# count_df = series_to_df(count_series, count_name)
+# #count_df.to_csv(f"mut_data/{count_name}_df.txt", sep = "\t", index = False)
 
 #PLOT
 # 5 splits = 32.6
