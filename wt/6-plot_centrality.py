@@ -85,11 +85,11 @@ def load_ddg(file):
     return data
 
 def combine_cent_sasa(cent_file, sasa_file = False, ddg_file = False):
-    cent = load_centrality(cent_file)
+    data = load_centrality(cent_file)
     if sasa_file:
         sasa = load_sasa(sasa_file)
         sasa = sasa.drop(columns = ['Name'])
-        data = cent.merge(sasa, on = 'Node')
+        data = data.merge(sasa, on = 'Node')
     if ddg_file:
         ddg = load_ddg(ddg_file)
         data = data.merge(ddg, on = 'Node')
