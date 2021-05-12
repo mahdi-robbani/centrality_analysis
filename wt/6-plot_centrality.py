@@ -101,18 +101,22 @@ def plot_cent_vs_res_multiplot(data, columns, n, out_dir, ext):
     data['index'] = list(range(len(data['Node'])))
     #get subset of dataframe with only labeled residue
     data_lab = data[data['Node'].isin(labeled_residues)]
-    data_other = data[~data['Node'].isin(labeled_residues)]
+    
     # set figure size and grid
     fig, axs = plt.subplots(3, 1, figsize = (9, 7), sharex= True, sharey= False)
     for i, ax in enumerate(axs.flat):
         ax.grid(alpha = 0.5)
+        # value of top n value
+        top_n_cutoff = sorted(data[columns[i]], reverse = True)[n:n+1][0] - 1e-06
+        data_top = data[data[columns[i]] > top_n_cutoff]
+        data_other = data[~(data['Node'].isin(labeled_residues) & data[columns[i]] > top_n_cutoff)]
         # make scatter plot
         #plot normal points
         ax.scatter(x = data_other['index'], y = data_other[columns[i]], edgecolors = 'black', alpha = 0.7)
         # plot labeled points
         ax.scatter(x = data_lab['index'], y = data_lab[columns[i]], edgecolors = 'black', alpha = 0.7, color = "purple")
-        # value of top n value
-        top_n_cutoff = sorted(data[columns[i]], reverse = True)[n:n+1][0] - 1e-06
+        # plot high value points
+        ax.scatter(x = data_top['index'], y = data_top[columns[i]], edgecolors = 'black', alpha = 0.7, color = "red")
         max_val = data[columns[i]].max()
         texts = []
         # label top n
@@ -142,7 +146,6 @@ def plot_cent_vs_res(data, column, n, out_dir, ext):
     data_lab = data[data['Node'].isin(labeled_residues)]
     data_top = data[data[column] > top_n_cutoff]
     data_other = data[~(data['Node'].isin(labeled_residues) & data[column] > top_n_cutoff)]
-    #data_other = data_other[~(data[column] > top_n_cutoff)]
     # set figure size and grid
     plt.figure(figsize=(9,7))
     plt.grid(alpha = 0.5)
