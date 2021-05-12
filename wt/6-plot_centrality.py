@@ -150,31 +150,31 @@ def plot_cent_vs_res(data, column, n, out_dir, ext):
     #get subset of dataframe with only labeled residue
     data_lab = data[data['Node'].isin(labeled_residues)]
     data_other = data[~data['Node'].isin(labeled_residues)]
-    # set figure size
+    # set figure size and grid
     plt.figure(figsize=(9,7))
+    plt.grid(alpha = 0.5)
     # make scatter plot
     #plot normal points
     plt.scatter(x = data_other['index'], y = data_other[column], edgecolors = 'black', alpha = 0.7)
     # plot labeled points
     plt.scatter(x = data_lab['index'], y = data_lab[column], edgecolors = 'black', alpha = 0.7, color = "purple")
-    # set limits and labels
-    plt.ylim(bottom = 0)
-    plt.xlabel("Residue Index")
-    plt.ylabel("Centrality Value")
     # value of top n value
     top_n_cutoff = sorted(data[column], reverse = True)[n:n+1][0] - 1e-06
     max_val = data[column].max()
     # label top n
     for i, val in enumerate(data[column]):
-        x_pos = i + (0.02 * max_val)
-        y_pos = val  + (0.02 * max_val)
+        x_pos = i + (0.015 * max_val)
+        y_pos = val  + (0.015 * max_val)
         # pick all top values, ignore value if zero
         if val > top_n_cutoff and val > 0:
             plt.annotate(data['Residue'][i], (x_pos, y_pos), alpha = 0.8)
         # label active site residues
         if data['Node'][i] in labeled_residues:
             plt.annotate(data['Residue'][i], (x_pos, y_pos), color = "purple", alpha = 0.8)
-    #fix layout
+    # set limits and labels
+    plt.ylim(bottom = 0)
+    plt.xlabel("Residue Index")
+    plt.ylabel("Centrality Value")
     plt.tight_layout()
     plt.savefig(f"{out_dir}/{column}_centrality_top{n}{ext}.pdf")
     plt.clf()
