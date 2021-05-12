@@ -4,30 +4,28 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
 import MDAnalysis as mda
-import argparse
 import pickle
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap
 from collections import Counter
 from pyinteraph import path_analysis as pa
 import adjustText
-import random
 
 # WT_DICT = {"Degree": 0.030864,
 #               "Betweenness": 0.144122,
 #               "Closeness": 0.067009,
 #               "Eigenvector": 0.519175}
 
-# RANGE_DICT = {"Degree": 0.035,
-#               "Betweenness": 0.15,
-#               "Closeness": 0.10,
-#               "Eigenvector": 0.55,
-#               "CF_betweenness_1" : 0.75,
-#               "CF_betweenness_2" : 0.75,
-#               "CF_betweenness_3" : 0.75,
-#               "CF_closeness_1" : 0.135,
-#               "CF_closeness_2" : 0.135,
-#               "CF_closeness_3" : 0.135,
-#               }
+RANGE_DICT = {"Degree": 0.035,
+              "Betweenness": 0.15,
+              "Closeness": 0.10,
+              "Eigenvector": 0.55,
+              "CF_betweenness_1" : 0.75,
+              "CF_betweenness_2" : 0.75,
+              "CF_betweenness_3" : 0.75,
+              "CF_closeness_1" : 0.135,
+              "CF_closeness_2" : 0.135,
+              "CF_closeness_3" : 0.135,
+              }
 
 CUTOFF_DICT = {"Degree": 5,
               "Betweenness": 5,
@@ -97,53 +95,90 @@ def combine_cent_sasa(cent_file, sasa_file = False, ddg_file = False):
 
 # plotting functions
 
-def plot_centrality_vs_residues(data, columns, top_n, fname, out_dir, share_y, max_range = None, size = (9, 7)):
-    active_site = ['A55','A60','A102','A113','A122','A126']
-    active_site = ['A6','A29','A63','A66','A66','A99']
-    node_dict = {}
-    nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
-    for n in top_n:
-        fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= share_y)
-        for i, ax in enumerate(axs.flat):
-            if i < len(columns):
-                ax.scatter(x = range(len(data[columns[i]])), y = data[columns[i]], edgecolors = 'black', alpha = 0.7)
-                ax.set_title(columns[i])
-                if max_range == "max":
-                    ax.set_ylim(top = 1)
-                elif max_range == "range_dict":
-                    ax.set_ylim(top = RANGE_DICT[columns[i]])
-                # GET CUTOFF
-                #mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
-                #cutoff = mean_std[0] + sd*mean_std[1]
-                cutoff = sorted(data[columns[i]], reverse = True)[n:n+1][0] - 1e-06
-                #print(cutoff)
-                node_list = []
-                texts = []
-                max_val = data[columns[i]].max()
-                for j, val in enumerate(data[columns[i]]):
-                    if val > cutoff and val > 0:
-                        ax.annotate(data['Residue'][j], (j, val), alpha = 0.8)
-                        #node_list.append(data['Residue'][j])
-                        #texts.append(ax.text(j, val, data['Residue'][j]))
-                    if data['Node'][j] in active_site:
-                        #texts.append(ax.text(j, val, data['Residue'][j], color = "purple"))
-                        ax.annotate(data['Residue'][j], (j, val), color = "purple", alpha = 0.8)
-                adjustText.adjust_text(texts)
-                node_dict.update({columns[i] : node_list})
-                #plot horizontal line at cutoff
-                #ax.hlines(y = cutoff, xmin = 0, xmax = len(data['Node']), linestyles = "dashed")
-                if i % 2 == 0:
-                    ax.set(ylabel='Centrality Value')
-                if i == (nrows*2)-2 or i == (nrows*2)-1:
-                    ax.set(xlabel='Residues')
-                #ax.set(xlabel = 'residues', ylabel='Centrality Value')
-                ax.grid()
-            else:
-                ax.set_visible(False)
-        fig.tight_layout()
-        plt.savefig(f"{out_dir}/centrality_{n}_{fname}.pdf")
-        plt.clf()
-    return node_dict
+# def plot_centrality_vs_residues(data, columns, top_n, fname, out_dir, share_y, max_range = None, size = (9, 7)):
+#     active_site = ['A55','A60','A102','A113','A122','A126']
+#     active_site = ['A6','A29','A63','A66','A66','A99']
+#     node_dict = {}
+#     nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
+#     for n in top_n:
+#         fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= share_y)
+#         for i, ax in enumerate(axs.flat):
+#             if i < len(columns):
+#                 ax.scatter(x = range(len(data[columns[i]])), y = data[columns[i]], edgecolors = 'black', alpha = 0.7)
+#                 ax.set_title(columns[i])
+#                 if max_range == "max":
+#                     ax.set_ylim(top = 1)
+#                 elif max_range == "range_dict":
+#                     ax.set_ylim(top = RANGE_DICT[columns[i]])
+#                 # GET CUTOFF
+#                 #mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
+#                 #cutoff = mean_std[0] + sd*mean_std[1]
+#                 cutoff = sorted(data[columns[i]], reverse = True)[n:n+1][0] - 1e-06
+#                 #print(cutoff)
+#                 node_list = []
+#                 texts = []
+#                 max_val = data[columns[i]].max()
+#                 for j, val in enumerate(data[columns[i]]):
+#                     if val > cutoff and val > 0:
+#                         ax.annotate(data['Residue'][j], (j, val), alpha = 0.8)
+#                         #node_list.append(data['Residue'][j])
+#                         #texts.append(ax.text(j, val, data['Residue'][j]))
+#                     if data['Node'][j] in active_site:
+#                         #texts.append(ax.text(j, val, data['Residue'][j], color = "purple"))
+#                         ax.annotate(data['Residue'][j], (j, val), color = "purple", alpha = 0.8)
+#                 adjustText.adjust_text(texts)
+#                 node_dict.update({columns[i] : node_list})
+#                 #plot horizontal line at cutoff
+#                 #ax.hlines(y = cutoff, xmin = 0, xmax = len(data['Node']), linestyles = "dashed")
+#                 if i % 2 == 0:
+#                     ax.set(ylabel='Centrality Value')
+#                 if i == (nrows*2)-2 or i == (nrows*2)-1:
+#                     ax.set(xlabel='Residues')
+#                 #ax.set(xlabel = 'residues', ylabel='Centrality Value')
+#                 ax.grid()
+#             else:
+#                 ax.set_visible(False)
+#         fig.tight_layout()
+#         plt.savefig(f"{out_dir}/centrality_{n}_{fname}.pdf")
+#         plt.clf()
+#     return node_dict
+
+def plot_cent_vs_res(data, column, n, out_dir, ext):
+    labeled_residues = ['A6','A29','A63','A66','A66','A99']
+    # add index to df
+    data['index'] = list(range(len(data[column])))
+    #get subset of dataframe with only labeled residue
+    data_lab = data[data['Node'].isin(labeled_residues)]
+    data_other = data[~data['Node'].isin(labeled_residues)]
+    # set figure size
+    plt.figure(figsize=(9,7))
+    # make scatter plot
+    #plot normal points
+    plt.scatter(x = data_other['index'], y = data_other[column], edgecolors = 'black', alpha = 0.7)
+    # plot labeled points
+    plt.scatter(x = data_lab['index'], y = data_lab[column], edgecolors = 'black', alpha = 0.7, color = "purple")
+    # set limits and labels
+    plt.ylim(bottom = 0)
+    plt.xlabel("Residue Index")
+    plt.ylabel("Centrality Value")
+    # value of top n value
+    top_n_cutoff = sorted(data[column], reverse = True)[n:n+1][0] - 1e-06
+    max_val = data[column].max()
+    # label top n
+    for i, val in enumerate(data[column]):
+        x_pos = i + (0.02 * max_val)
+        y_pos = val  + (0.02 * max_val)
+        # pick all top values, ignore value if zero
+        if val > top_n_cutoff and val > 0:
+            plt.annotate(data['Residue'][i], (x_pos, y_pos), alpha = 0.8)
+        # label active site residues
+        if data['Node'][i] in labeled_residues:
+            plt.annotate(data['Residue'][i], (x_pos, y_pos), color = "purple", alpha = 0.8)
+    #fix layout
+    plt.tight_layout()
+    plt.savefig(f"{out_dir}/{column}_centrality_top{n}{ext}.pdf")
+    plt.clf()
+
 
 def heatmap(data, colnames, fname, oudir):
     #ignore glycines
@@ -183,8 +218,8 @@ cf_cols = sorted(cf_cols, key = lambda c : c.split('_')[2:])
 cf_cols = cf_cols[:6]
 
 #plot toggles
-plot = True
-CENT_B = plot
+plot = False
+CENT_B = True
 CENT_CF = plot
 CORR = plot
 NETWORK = plot
@@ -204,10 +239,11 @@ sds = [3]
 
 # plot basic
 if CENT_B:
-    print("plotting centrality vs residues for basic cenralities")
-    # plot custom plots (defined by range dict)
-    wt_nodes = plot_centrality_vs_residues(data, basic_cols, sds, "basic_f", out_dir, share_y = False)
-    print(get_count(wt_nodes))
+    print("plotting centrality vs residues")
+    for cent in basic_cols:
+        print(f"plotting {cent}")
+        plot_cent_vs_res(data, cent, 3, "plots", "")
+    #plot_centrality_vs_residues(data, basic_cols, sds, "basic_f", out_dir, share_y = False)
     # Plot absolute plots (max range [0-1])
     #plot_centrality_vs_residues(data, basic_cols, sds, "basic_m", out_dir, share_y = False, max_range = "max")
     # #plot sasa and ddg values
