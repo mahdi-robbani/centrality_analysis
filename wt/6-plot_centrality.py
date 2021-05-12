@@ -107,9 +107,9 @@ def plot_cent_vs_res_multiplot(data, columns, n, out_dir, ext):
     for i, ax in enumerate(axs.flat):
         ax.grid(alpha = 0.5)
         # value of top n value
-        top_n_cutoff = sorted(data[columns[i]], reverse = True)[n:n+1][0] - 1e-06
-        data_top = data[data[columns[i]] > top_n_cutoff]
-        data_other = data[~(data['Node'].isin(labeled_residues) & data[columns[i]] > top_n_cutoff)]
+        top_n_cutoff = sorted(data[columns[i]], reverse = True)[n-1:n][0]
+        data_top = data[data[columns[i]] >= top_n_cutoff]
+        data_other = data[~(data['Node'].isin(labeled_residues) & data[columns[i]] >= top_n_cutoff)]
         # make scatter plot
         #plot normal points
         ax.scatter(x = data_other['index'], y = data_other[columns[i]], edgecolors = 'black', alpha = 0.7)
@@ -124,7 +124,7 @@ def plot_cent_vs_res_multiplot(data, columns, n, out_dir, ext):
             # pick all top values, ignore value if zero
             if data['Node'][j] in labeled_residues:
                 texts.append(ax.text(j, val, data['Residue'][j], color = "purple"))
-            elif val > top_n_cutoff and val > 0:
+            elif val >= top_n_cutoff and val > 0:
                 texts.append(ax.text(j, val, data['Residue'][j]))
             # label active site residues
         # set limits and labels
@@ -139,13 +139,13 @@ def plot_cent_vs_res_multiplot(data, columns, n, out_dir, ext):
 def plot_cent_vs_res(data, column, n, out_dir, ext):
     labeled_residues = ['A6','A29','A63','A66','A66','A99']
     # value of top n value
-    top_n_cutoff = sorted(data[column], reverse = True)[n:n+1][0] - 1e-06
+    top_n_cutoff = sorted(data[column], reverse = True)[n-1:n][0]
     # add index to df
     data['index'] = list(range(len(data[column])))
     #get subset of dataframe with only labeled residue
     data_lab = data[data['Node'].isin(labeled_residues)]
-    data_top = data[data[column] > top_n_cutoff]
-    data_other = data[~(data['Node'].isin(labeled_residues) & data[column] > top_n_cutoff)]
+    data_top = data[data[column] >= top_n_cutoff]
+    data_other = data[~(data['Node'].isin(labeled_residues) & data[column] >= top_n_cutoff)]
     # set figure size and grid
     plt.figure(figsize=(9,7))
     plt.grid(alpha = 0.5)
@@ -162,7 +162,7 @@ def plot_cent_vs_res(data, column, n, out_dir, ext):
         # pick all top values, ignore value if zero
         if data['Node'][i] in labeled_residues:
             texts.append(plt.text(i, val, data['Residue'][i], color = "purple"))
-        elif val > top_n_cutoff and val > 0:
+        elif val >= top_n_cutoff and val > 0:
             texts.append(plt.text(i, val, data['Residue'][i]))
         # label active site residues
     # set limits and labels
@@ -236,6 +236,7 @@ def get_count(node_dict):
 # plot basic
 if CENT_B:
     print("plotting centrality vs residues")
+    plot_cent_vs_res(data, 'Degree', 3, "plots", "")
     for cent in basic_cols:
         print(f"plotting {cent}")
         plot_cent_vs_res(data, cent, 5, "plots", "")
