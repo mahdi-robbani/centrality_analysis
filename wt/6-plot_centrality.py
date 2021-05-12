@@ -150,22 +150,23 @@ def plot_cent_vs_res(data, column, n, out_dir, ext):
     plt.scatter(x = data_lab['index'], y = data_lab[column], edgecolors = 'black', alpha = 0.7, color = "purple")
     # value of top n value
     top_n_cutoff = sorted(data[column], reverse = True)[n:n+1][0] - 1e-06
-    max_val = data[column].max()
+    texts = []
     # label top n
     for i, val in enumerate(data[column]):
-        x_pos = i + (0.015 * max_val)
-        y_pos = val  + (0.015 * max_val)
         # pick all top values, ignore value if zero
-        if val > top_n_cutoff and val > 0:
-            plt.annotate(data['Residue'][i], (x_pos, y_pos), alpha = 0.8)
-        # label active site residues
         if data['Node'][i] in labeled_residues:
-            plt.annotate(data['Residue'][i], (x_pos, y_pos), color = "purple", alpha = 0.8)
+            texts.append(plt.text(i, val, data['Residue'][i], color = "purple"))
+        elif val > top_n_cutoff and val > 0:
+            texts.append(plt.text(i, val, data['Residue'][i]))
+        # label active site residues
+
     # set limits and labels
     plt.ylim(bottom = 0)
     plt.xlabel("Residue Index")
     plt.ylabel("Centrality Value")
     plt.tight_layout()
+    # adjust text
+    adjustText.adjust_text(texts)
     plt.savefig(f"{out_dir}/{column}_centrality_top{n}{ext}.pdf")
     plt.clf()
 
@@ -211,7 +212,7 @@ cf_close_cols = [c for c in cf_cols if "closeness" in c][:3]
 
 #plot toggles
 plot = False
-CENT_B = plot
+CENT_B = True
 CENT_CF = True
 CORR = plot
 NETWORK = plot
@@ -232,7 +233,7 @@ if CENT_B:
     print("plotting centrality vs residues")
     for cent in basic_cols:
         print(f"plotting {cent}")
-        plot_cent_vs_res(data, cent, 3, "plots", "")
+        plot_cent_vs_res(data, cent, 5, "plots", "")
     #plot_centrality_vs_residues(data, basic_cols, sds, "basic_f", out_dir, share_y = False)
     # Plot absolute plots (max range [0-1])
     #plot_centrality_vs_residues(data, basic_cols, sds, "basic_m", out_dir, share_y = False, max_range = "max")
@@ -245,9 +246,9 @@ if CENT_CF:
     print("plotting centrality vs residues for CF cenralities")
     # Plot relative plots (default range)
     print(f"plotting {cf_bet_cols}")
-    plot_cent_vs_res_multiplot(data, cf_bet_cols, 3, "plots", "")
+    plot_cent_vs_res_multiplot(data, cf_bet_cols, 5, "plots", "")
     print(f"plotting {cf_close_cols}")
-    plot_cent_vs_res_multiplot(data, cf_close_cols, 3, "plots", "")
+    plot_cent_vs_res_multiplot(data, cf_close_cols, 5, "plots", "")
     #plot_centrality_vs_residues(data, cf_cols, sds, "cf", out_dir, share_y = False)
     # # Plot absolute plots (max range [0-1])
     # plot_centrality_vs_residues(data, cf_cols, sds, "cf_m", out_dir, share_y = False, max_range = "max")
