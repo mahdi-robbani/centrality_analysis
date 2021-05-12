@@ -134,21 +134,25 @@ def plot_cent_vs_res_multiplot(data, columns, n, out_dir, ext):
 
 def plot_cent_vs_res(data, column, n, out_dir, ext):
     labeled_residues = ['A6','A29','A63','A66','A66','A99']
+    # value of top n value
+    top_n_cutoff = sorted(data[column], reverse = True)[n:n+1][0] - 1e-06
     # add index to df
     data['index'] = list(range(len(data[column])))
     #get subset of dataframe with only labeled residue
     data_lab = data[data['Node'].isin(labeled_residues)]
-    data_other = data[~data['Node'].isin(labeled_residues)]
+    data_top = data[data[column] > top_n_cutoff]
+    data_other = data[~(data['Node'].isin(labeled_residues) & data[column] > top_n_cutoff)]
+    #data_other = data_other[~(data[column] > top_n_cutoff)]
     # set figure size and grid
     plt.figure(figsize=(9,7))
     plt.grid(alpha = 0.5)
     # make scatter plot
-    #plot normal points
+    # plot normal points
     plt.scatter(x = data_other['index'], y = data_other[column], edgecolors = 'black', alpha = 0.7)
     # plot labeled points
     plt.scatter(x = data_lab['index'], y = data_lab[column], edgecolors = 'black', alpha = 0.7, color = "purple")
-    # value of top n value
-    top_n_cutoff = sorted(data[column], reverse = True)[n:n+1][0] - 1e-06
+    # plot high value points
+    plt.scatter(x = data_top['index'], y = data_top[column], edgecolors = 'black', alpha = 0.7, color = "red")
     texts = []
     # label top n
     for i, val in enumerate(data[column]):
@@ -158,7 +162,6 @@ def plot_cent_vs_res(data, column, n, out_dir, ext):
         elif val > top_n_cutoff and val > 0:
             texts.append(plt.text(i, val, data['Residue'][i]))
         # label active site residues
-
     # set limits and labels
     plt.ylim(bottom = 0)
     plt.xlabel("Residue Index")
