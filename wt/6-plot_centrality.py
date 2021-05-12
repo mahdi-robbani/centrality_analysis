@@ -114,22 +114,21 @@ def plot_cent_vs_res_multiplot(data, columns, n, out_dir, ext):
         # value of top n value
         top_n_cutoff = sorted(data[columns[i]], reverse = True)[n:n+1][0] - 1e-06
         max_val = data[columns[i]].max()
+        texts = []
         # label top n
         for j, val in enumerate(data[columns[i]]):
-            x_pos = j + (0.015 * max_val)
-            y_pos = val  + (0.015 * max_val)
             # pick all top values, ignore value if zero
-            if val > top_n_cutoff and val > 0:
-                ax.annotate(data['Residue'][j], (x_pos, y_pos), alpha = 0.8)
-            # label active site residues
             if data['Node'][j] in labeled_residues:
-                ax.annotate(data['Residue'][j], (x_pos, y_pos), color = "purple", alpha = 0.8)
+                texts.append(ax.text(j, val, data['Residue'][j], color = "purple"))
+            elif val > top_n_cutoff and val > 0:
+                texts.append(ax.text(j, val, data['Residue'][j]))
+            # label active site residues
         # set limits and labels
         if i == 1:
             ax.set(ylabel='Centrality Value')
         ax.set_ylim(bottom = 0, top = (max_val * 1.1))
     plt.xlabel("Residue Index")
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.savefig(f"{out_dir}/{columns[0]}_centrality_top{n}{ext}.pdf")
     plt.clf()
 
