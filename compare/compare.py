@@ -53,9 +53,10 @@ def get_diff_df(wt_df, mt_df, scale, abs = False):
 
 def get_diff_rank_df(wt_df, mt_df, abs = False):
     colnames = ["Degree", "Betweenness", "Closeness", "Eigenvector"]
-    wt_df = wt_df[colnames].rank(method = 'min', ascending = False)
-    mt_df = mt_df[colnames].rank(method = 'min', ascending = False)
-    diff = mt_df - wt_df
+    wt_df = wt_df[colnames].rank(method = 'first', ascending = False)
+    mt_df = mt_df[colnames].rank(method = 'first', ascending = False)
+    #diff = mt_df - wt_df
+    diff = wt_df - mt_df
     diff = diff.abs() if abs else diff
     return diff
 
@@ -64,42 +65,54 @@ mt_df = load_centrality(mt)
 
 diff_df = get_diff_df(wt_df, mt_df, scale = False, abs = False)
 diff_df['Residue'] = wt_df['Residue']
+diff_df['Node'] = wt_df['Node']
 
-def plot_centrality_vs_residues(data, columns, sds, fname = "", size = (9, 7)):
+def plot_centrality_vs_residues(data, columns, top_n, fname, out_dir, share_y, max_range = None, size = (9, 7)):
+    active_site = ['A55','A60','A102','A113','A122','A126']
+    active_site = ['A6','A29','A63','A66','A66','A99']
     node_dict = {}
-    # make sure equal number of rows and cols
     nrows = len(columns)//2 if len(columns) % 2 == 0 else len(columns)//2 + 1
-    # make one plot for each standard deviation
-    for sd in sds:
-        fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= False)
+    for n in top_n:
+        fig, axs = plt.subplots(nrows, 2, figsize = size, sharex= True, sharey= share_y)
         for i, ax in enumerate(axs.flat):
             if i < len(columns):
-                ax.plot(data[columns[i]], label = columns[i])
+                ax.scatter(x = range(len(data[columns[i]])), y = data[columns[i]], edgecolors = 'black', alpha = 0.7)
                 ax.set_title(columns[i])
-                mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
-                cutoff_u = mean_std[0] + sd*mean_std[1]
-                cutoff_l = mean_std[0] - sd*mean_std[1]
+                if max_range == "max":
+                    ax.set_ylim(top = 1)
+                elif max_range == "range_dict":
+                    ax.set_ylim(top = RANGE_DICT[columns[i]])
+                # GET CUTOFF
+                #mean_std = [data[columns[i]].mean(), data[columns[i]].std()]
+                #cutoff = mean_std[0] + sd*mean_std[1]
+                cutoff_u = sorted(data[columns[i]], reverse = True)[n:n+1][0] - 1e-06
+                cutoff_l = sorted(data[columns[i]])[n:n+1][0] + 1e-06
+                #print(cutoff)
                 node_list = []
+                texts = []
+                max_val = data[columns[i]].max()
                 for j, val in enumerate(data[columns[i]]):
                     if val > cutoff_u or val < cutoff_l:
-                        resname = data['Residue'][j]
-                        if resname != 'S99':
-                            ax.annotate(data['Residue'][j], (j, val))
-                        else:
-                            ax.annotate('T99', (j, val))
-                        node_list.append(data['Residue'][j])
+                        ax.annotate(data['Residue'][j], (j, val), alpha = 0.8)
+                        #node_list.append(data['Residue'][j])
+                        #texts.append(ax.text(j, val, data['Residue'][j]))
+                    if data['Node'][j] in active_site:
+                        #texts.append(ax.text(j, val, data['Residue'][j], color = "purple"))
+                        ax.annotate(data['Residue'][j], (j, val), color = "purple", alpha = 0.8)
+                #adjustText.adjust_text(texts)
                 node_dict.update({columns[i] : node_list})
-                ax.hlines(y = cutoff_u, xmin = 0, xmax = len(data['Residue']), linestyles = "dashed")
-                ax.hlines(y = cutoff_l, xmin = 0, xmax = len(data['Residue']), linestyles = "dashed")
+                #plot horizontal line at cutoff
+                #ax.hlines(y = cutoff, xmin = 0, xmax = len(data['Node']), linestyles = "dashed")
                 if i % 2 == 0:
                     ax.set(ylabel='Centrality Value')
                 if i == (nrows*2)-2 or i == (nrows*2)-1:
                     ax.set(xlabel='Residues')
+                #ax.set(xlabel = 'residues', ylabel='Centrality Value')
                 ax.grid()
             else:
                 ax.set_visible(False)
         fig.tight_layout()
-        plt.savefig(f"{fname}.pdf")
+        plt.savefig(f"{out_dir}/centrality_{n}_{fname}.pdf")
         plt.clf()
     return node_dict
 
@@ -114,8 +127,8 @@ def get_count(node_dict):
     return node_list
 
 # Plot
-#diff_nodes = plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-1], [3], "diff")
-#print(get_count(diff_nodes))
+diff_nodes = plot_centrality_vs_residues(diff_df, list(diff_df.columns)[:-2], [1], "diff", "plots", False)
+print(get_count(diff_nodes))
 
 # create pdb
 
@@ -217,10 +230,14 @@ G, pos = get_graph_pos(psn, pdb)
 
 rank_diff_df = get_diff_rank_df(wt_df, mt_df)
 rank_diff_df = rank_diff_df#.abs()#/rank_diff_df.max()
-rank_diff_df['Residue'] = wt_df['Residue'].apply(lambda x: f"A{x[1:]}")
+rank_diff_df['Residue'] = wt_df['Residue']#.apply(lambda x: f"A{x[1:]}")
+rank_diff_df['Node'] = wt_df['Node']
 
+#plot rank
+diff_nodes = plot_centrality_vs_residues(rank_diff_df, list(rank_diff_df.columns)[:-2], [1], "diff_rank", "plots", False)
+print(get_count(diff_nodes))
 
-for measure in ["Degree", "Betweenness", "Closeness", "Eigenvector"]:
-    plot_graph(G, pos, rank_diff_df, measure, "", "rank_diff")
+# for measure in ["Degree", "Betweenness", "Closeness", "Eigenvector"]:
+#     plot_graph(G, pos, rank_diff_df, measure, "", "rank_diff")
 
 
