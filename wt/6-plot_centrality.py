@@ -176,6 +176,7 @@ def plot_cent_vs_res(data, column, n, out_dir, ext):
     plt.ylim(bottom = 0)
     plt.xlabel("Residue Index")
     plt.ylabel("Centrality Value")
+    plt.title(f"{column} Centrality")
     plt.tight_layout()
     # adjust text
     adjustText.adjust_text(texts)
