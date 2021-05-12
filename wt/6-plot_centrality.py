@@ -108,6 +108,9 @@ def plot_cent_vs_res_multiplot(data, columns, n, out_dir, ext):
         ax.grid(alpha = 0.5)
         # value of top n value
         top_n_cutoff = sorted(data[columns[i]], reverse = True)[n-1:n][0]
+        # make sure top_n values are all above zero
+        if top_n_cutoff == 0:
+            top_n_cutoff = 1e-06
         data_top = data[data[columns[i]] >= top_n_cutoff]
         data_other = data[~(data['Node'].isin(labeled_residues) & data[columns[i]] >= top_n_cutoff)]
         # make scatter plot
@@ -131,6 +134,7 @@ def plot_cent_vs_res_multiplot(data, columns, n, out_dir, ext):
         if i == 1:
             ax.set(ylabel='Centrality Value')
         ax.set_ylim(bottom = 0, top = (max_val * 1.1))
+        ax.set_title(f"Current Flow {columns[i].split('_')[1].capitalize()} {columns[i].split('_')[2]}")
     plt.xlabel("Residue Index")
     #plt.tight_layout()
     plt.savefig(f"{out_dir}/{columns[0]}_centrality_top{n}{ext}.pdf")
@@ -140,6 +144,9 @@ def plot_cent_vs_res(data, column, n, out_dir, ext):
     labeled_residues = ['A6','A29','A63','A66','A66','A99']
     # value of top n value
     top_n_cutoff = sorted(data[column], reverse = True)[n-1:n][0]
+    #make sure top n values are above 0
+    if top_n_cutoff == 0:
+        top_n_cutoff = 1e-06
     # add index to df
     data['index'] = list(range(len(data[column])))
     #get subset of dataframe with only labeled residue
