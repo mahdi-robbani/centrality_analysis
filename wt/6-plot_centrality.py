@@ -225,8 +225,8 @@ cf_close_cols = [c for c in cf_cols if "closeness" in c][:3]
 
 #plot toggles
 plot = False
-CENT_B = True
-CENT_CF = True
+CENT_B = plot
+CENT_CF = plot
 CORR = plot
 NETWORK = plot
 
@@ -298,13 +298,23 @@ def get_graph_pos(psn, pdb):
     # H.add_weighted_edges_from(weighted_edges)
     H = G
     # k = 0.5, iterations = 100
-    pos = nx.spring_layout(H, k = 0.55, seed = 1, iterations = 100)
-    save_pos(pos)
+    pos = nx.spring_layout(H, k = 0.55, seed = 1, iterations = 100) # default k = 0.55, iterations = 100, seed  = 1
+    #save_pos(pos)
     #pos = load_pos("../ccmpsn/pos.bin") #CHANGE
     #print(pos)
     return H, pos
 
+def get_largest_comp(G):
+    # Get all components
+    components = nx.algorithms.components.connected_components(G)
+    # Reverse sort components by size
+    component = sorted(components, key = lambda x: len(x), reverse = True)[0]
+    # return subgraph
+    H = G.subgraph(component).copy()
+    return H
+
 def plot_graph(G, pos, df, measure, out_dir, ext, r_dict = False):
+    #G = get_largest_comp(G)
     vmax = WT_DICT[measure] if r_dict else None
     r = "" if r_dict else "_f"
     isolates = list(nx.isolates(G))
@@ -337,7 +347,7 @@ G, pos = get_graph_pos(psn_file, pdb_file)
 if NETWORK:
     for measure in basic_cols + ['Mean DDG', 'Median DDG', 'Count_3']:
         print(f"Plotting network: {measure}")
-        plot_graph(G, pos, data, measure, out_dir, "", r_dict = False)
+        plot_graph(G, pos, data, measure, out_dir, "0.9", r_dict = False)
         # if measure == "Betweenness":
         #     break
 
